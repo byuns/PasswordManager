@@ -13,15 +13,17 @@ public sealed class VaultManager
 {
     private readonly IVaultFileStore _store;
     private readonly string _path;
+    private readonly KdfParams _kdfFloor; // 로그인 시 자동 상향 기준(design 7.5)
 
     private EncryptedVault? _current; // 현재 암호화 볼트(헤더+본문)
     private byte[]? _dek;             // 세션 DEK
     private VaultData? _data;         // 복호화된 본문
 
-    public VaultManager(IVaultFileStore store, string path)
+    public VaultManager(IVaultFileStore store, string path, KdfParams? kdfFloor = null)
     {
         _store = store;
         _path = path;
+        _kdfFloor = kdfFloor ?? KdfParams.Recommended;
     }
 
     /// <summary>세션이 열려 있는가(마스터 비번으로 언락된 상태).</summary>
@@ -54,9 +56,18 @@ public sealed class VaultManager
         var vault = _store.Load(_path);
         var session = VaultService.Unlock(vault, masterPassword);
 
-        _current = vault;
         _dek = session.Dek;
         _data = Deserialize(session.Content);
+
+        // 저장된 KDF가 현재 기준보다 약하면 자동으로 상향해 재저장한다(design 7.5).
+        if (vault.Header.Kdf.NeedsUpgradeTo(_kdfFloor))
+        {
+            vault = VaultService.UpgradeKdf(
+                vault, masterPassword, _dek, vault.Header.Kdf.RaisedTo(_kdfFloor));
+            _store.Save(_path, vault);
+        }
+
+        _current = vault;
     }
 
     /// <summary>

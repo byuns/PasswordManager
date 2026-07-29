@@ -185,4 +185,46 @@ public class VaultServiceTests
         Assert.NotEqual(a.Nonce, b.Nonce);
         Assert.NotEqual(a.Ciphertext, b.Ciphertext);
     }
+
+    // --- KDF 자동 상향 (M5, design 7.5) ---
+
+    private static readonly KdfParams Stronger = new(MemoryKiB: 16384, Iterations: 3, Parallelism: 2);
+
+    [Fact]
+    public void UpgradeKdf_stores_new_params_and_new_salt()
+    {
+        var result = VaultService.Create(Master, Content(), Light);
+        var session = VaultService.Unlock(result.Vault, Master);
+
+        var upgraded = VaultService.UpgradeKdf(result.Vault, Master, session.Dek, Stronger);
+
+        Assert.Equal(Stronger, upgraded.Header.Kdf);
+        Assert.NotEqual(result.Vault.Header.Salt, upgraded.Header.Salt);   // 새 salt
+        Assert.NotEqual(result.Vault.Header.DekByMaster, upgraded.Header.DekByMaster); // 재래핑
+    }
+
+    [Fact]
+    public void UpgradeKdf_opens_with_same_master_and_preserves_content()
+    {
+        var content = Content();
+        var result = VaultService.Create(Master, content, Light);
+        var session = VaultService.Unlock(result.Vault, Master);
+
+        var upgraded = VaultService.UpgradeKdf(result.Vault, Master, session.Dek, Stronger);
+
+        Assert.Equal(content, VaultService.OpenWithMaster(upgraded, Master)); // 같은 비번 유지
+    }
+
+    [Fact]
+    public void UpgradeKdf_does_not_reencrypt_body_and_keeps_recovery()
+    {
+        var content = Content();
+        var result = VaultService.Create(Master, content, Light);
+        var session = VaultService.Unlock(result.Vault, Master);
+
+        var upgraded = VaultService.UpgradeKdf(result.Vault, Master, session.Dek, Stronger);
+
+        Assert.Equal(result.Vault.Ciphertext, upgraded.Ciphertext);        // 본문 그대로
+        Assert.Equal(content, VaultService.OpenWithRecoveryKey(upgraded, result.RecoveryKey)); // 복구 경로 유지
+    }
 }

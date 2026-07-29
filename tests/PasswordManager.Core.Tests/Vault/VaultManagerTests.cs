@@ -320,6 +320,57 @@ public class VaultManagerTests
         Assert.DoesNotContain(e.PasswordHistory, h => h.Password == "s3cr3t"); // 가장 오래된 것 제거
     }
 
+    // --- KDF 자동 상향 (M5, design 7.5) ---
+
+    // Light(8192/2/1)보다 강하지만 여전히 가벼운 상향 기준(테스트 속도 유지).
+    private static readonly KdfParams Floor = new(MemoryKiB: 16384, Iterations: 3, Parallelism: 2);
+
+    [Fact]
+    public void Open_upgrades_kdf_when_below_floor_and_persists()
+    {
+        var store = new InMemoryStore();
+        var m1 = new VaultManager(store, Path, Floor);
+        m1.CreateNew(Master, Light);            // Floor보다 약한 파라미터로 생성
+        m1.Add(NewEntry());
+        var savesAfterCreate = store.SaveCount;
+
+        var m2 = new VaultManager(store, Path, Floor);
+        m2.Open(Master);                        // 열 때 자동 상향 → 재저장
+
+        Assert.True(store.SaveCount > savesAfterCreate);
+        var stored = store.Load(Path);
+        Assert.Equal(Floor, stored.Header.Kdf);
+    }
+
+    [Fact]
+    public void Open_upgraded_vault_reopens_with_same_master_and_keeps_data()
+    {
+        var store = new InMemoryStore();
+        var m1 = new VaultManager(store, Path, Floor);
+        m1.CreateNew(Master, Light);
+        m1.Add(NewEntry("Steam"));
+
+        new VaultManager(store, Path, Floor).Open(Master); // 1회차: 상향
+
+        var m3 = new VaultManager(store, Path, Floor);
+        m3.Open(Master);                                   // 2회차: 상향된 볼트를 같은 비번으로
+        Assert.Equal("Steam", Assert.Single(m3.Entries).Title);
+    }
+
+    [Fact]
+    public void Open_does_not_resave_when_kdf_already_at_floor()
+    {
+        var store = new InMemoryStore();
+        var m1 = new VaultManager(store, Path, Floor);
+        m1.CreateNew(Master, Floor);            // 이미 기준 충족
+        var savesAfterCreate = store.SaveCount;
+
+        var m2 = new VaultManager(store, Path, Floor);
+        m2.Open(Master);
+
+        Assert.Equal(savesAfterCreate, store.SaveCount); // 재저장 없음
+    }
+
     [Fact]
     public void Update_preserves_created_at_and_persists_history_across_reopen()
     {

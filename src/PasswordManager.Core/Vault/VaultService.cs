@@ -117,6 +117,22 @@ public static class VaultService
         return vault with { Header = newHeader };
     }
 
+    /// <summary>
+    /// KDF 파라미터를 상향한다(로그인 시 자동 강화, design 7.5). 같은 마스터 비밀번호를 새 salt·새
+    /// 파라미터로 재파생해 DEK를 다시 감싼다. 이미 확보한 dek를 재사용하며 본문·복구 래핑은 그대로
+    /// 유지하므로 마스터·복구 두 경로 모두 계속 유효하다.
+    /// </summary>
+    public static EncryptedVault UpgradeKdf(
+        EncryptedVault vault, string masterPassword, byte[] dek, KdfParams newKdf)
+    {
+        var newSalt = KeyDerivation.NewSalt();
+        var newKek = KeyDerivation.DeriveKey(masterPassword, newSalt, newKdf);
+        var newDekByMaster = KeyWrap.Wrap(newKek, dek);
+
+        var newHeader = vault.Header with { Salt = newSalt, Kdf = newKdf, DekByMaster = newDekByMaster };
+        return vault with { Header = newHeader };
+    }
+
     /// <summary>마스터 비밀번호를 바꾼다. DEK를 새 마스터키로 다시 감싸기만 하며 본문은 재암호화하지 않는다.</summary>
     public static EncryptedVault ChangeMasterPassword(
         EncryptedVault vault, string currentMasterPassword, string newMasterPassword, KdfParams newKdf)

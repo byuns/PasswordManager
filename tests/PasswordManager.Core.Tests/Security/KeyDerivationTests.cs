@@ -55,4 +55,51 @@ public class KeyDerivationTests
         Assert.Equal(KeyDerivation.SaltSizeBytes, a.Length);
         Assert.NotEqual(a, b);
     }
+
+    // --- KDF 자동 상향 (M5, design 7.5) ---
+
+    [Fact]
+    public void RaisedTo_takes_per_field_maximum()
+    {
+        var weak = new KdfParams(MemoryKiB: 8192, Iterations: 2, Parallelism: 1);
+        var floor = new KdfParams(MemoryKiB: 65536, Iterations: 3, Parallelism: 4);
+
+        var raised = weak.RaisedTo(floor);
+
+        Assert.Equal(65536, raised.MemoryKiB);
+        Assert.Equal(3, raised.Iterations);
+        Assert.Equal(4, raised.Parallelism);
+    }
+
+    [Fact]
+    public void RaisedTo_never_downgrades_stronger_fields()
+    {
+        var strongMemory = new KdfParams(MemoryKiB: 131072, Iterations: 2, Parallelism: 4);
+        var floor = new KdfParams(MemoryKiB: 65536, Iterations: 3, Parallelism: 4);
+
+        var raised = strongMemory.RaisedTo(floor);
+
+        Assert.Equal(131072, raised.MemoryKiB); // 더 강한 메모리는 유지
+        Assert.Equal(3, raised.Iterations);     // 약한 반복만 상향
+    }
+
+    [Fact]
+    public void NeedsUpgradeTo_true_when_any_field_below_floor()
+    {
+        var weak = new KdfParams(MemoryKiB: 8192, Iterations: 3, Parallelism: 4);
+        var floor = new KdfParams(MemoryKiB: 65536, Iterations: 3, Parallelism: 4);
+
+        Assert.True(weak.NeedsUpgradeTo(floor));
+    }
+
+    [Fact]
+    public void NeedsUpgradeTo_false_when_at_or_above_floor()
+    {
+        var floor = new KdfParams(MemoryKiB: 65536, Iterations: 3, Parallelism: 4);
+        var atFloor = floor;
+        var above = new KdfParams(MemoryKiB: 131072, Iterations: 4, Parallelism: 4);
+
+        Assert.False(atFloor.NeedsUpgradeTo(floor));
+        Assert.False(above.NeedsUpgradeTo(floor));
+    }
 }

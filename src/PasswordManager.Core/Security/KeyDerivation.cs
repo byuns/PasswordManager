@@ -9,6 +9,18 @@ public sealed record KdfParams(int MemoryKiB, int Iterations, int Parallelism)
 {
     /// <summary>초기 권장치: 메모리 64 MiB, 반복 3, 병렬성 4 (TD-015).</summary>
     public static KdfParams Recommended { get; } = new(MemoryKiB: 65536, Iterations: 3, Parallelism: 4);
+
+    /// <summary>
+    /// 이 파라미터를 floor 이상으로 끌어올린 값(각 항목별 최댓값). 이미 floor보다 강한 항목은
+    /// 낮추지 않으므로 상향은 언제나 강도를 높이는 방향이다(design 7.5).
+    /// </summary>
+    public KdfParams RaisedTo(KdfParams floor) => new(
+        MemoryKiB: Math.Max(MemoryKiB, floor.MemoryKiB),
+        Iterations: Math.Max(Iterations, floor.Iterations),
+        Parallelism: Math.Max(Parallelism, floor.Parallelism));
+
+    /// <summary>floor 기준으로 상향이 필요한가(어느 한 항목이라도 floor보다 약하면 true).</summary>
+    public bool NeedsUpgradeTo(KdfParams floor) => !Equals(RaisedTo(floor));
 }
 
 /// <summary>
