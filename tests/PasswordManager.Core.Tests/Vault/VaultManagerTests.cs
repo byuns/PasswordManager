@@ -320,6 +320,25 @@ public class VaultManagerTests
         Assert.DoesNotContain(e.PasswordHistory, h => h.Password == "s3cr3t"); // 가장 오래된 것 제거
     }
 
+    // --- 백업/복원 (M6) ---
+
+    [Fact]
+    public void Backup_then_restore_via_manager_roundtrips_and_locks()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path, Light);
+        m.CreateNew(Master, Light);
+        m.Add(NewEntry("Steam"));
+        m.Backup("backup.dat");
+        m.Add(NewEntry("Later"));   // 백업 이후 변경
+
+        m.Restore("backup.dat");
+
+        Assert.False(m.IsUnlocked);  // 복원 후 세션 닫힘
+        m.Open(Master);
+        Assert.Equal("Steam", Assert.Single(m.Entries).Title);
+    }
+
     // --- KDF 자동 상향 (M5, design 7.5) ---
 
     // Light(8192/2/1)보다 강하지만 여전히 가벼운 상향 기준(테스트 속도 유지).

@@ -202,6 +202,16 @@ public sealed class VaultManager
         Persist();
     }
 
+    /// <summary>현재 볼트를 백업 경로로 복사한다(암호화 상태 그대로, 언락 불필요). M6.</summary>
+    public void Backup(string backupPath) => VaultBackup.Backup(_store, _path, backupPath);
+
+    /// <summary>백업 파일로 현재 볼트를 복원하고 세션을 닫는다. 이후 백업의 마스터 비번으로 다시 열어야 한다. M6.</summary>
+    public void Restore(string backupPath)
+    {
+        VaultBackup.Restore(_store, backupPath, _path);
+        Lock();
+    }
+
     /// <summary>id로 항목을 삭제하고 저장한다.</summary>
     public void Remove(string id)
     {
