@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PasswordManager.Core.Models;
+using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
 
 namespace PasswordManager.ViewModels;
@@ -78,4 +79,22 @@ public sealed partial class EntryEditViewModel : ObservableObject
 
     [RelayCommand]
     private void Cancel() => Cancelled?.Invoke(this, EventArgs.Empty);
+
+    // ── 비밀번호 생성기 (design 7.1) ──
+    [ObservableProperty] private int _generatorLength = 16;
+    [ObservableProperty] private bool _genUppercase = true;
+    [ObservableProperty] private bool _genLowercase = true;
+    [ObservableProperty] private bool _genDigits = true;
+    [ObservableProperty] private bool _genSymbols = true;
+    [ObservableProperty] private bool _genExcludeAmbiguous = true;
+
+    [RelayCommand]
+    private void GeneratePassword() =>
+        Password = PasswordGenerator.Generate(new PasswordOptions(
+            Length: GeneratorLength,
+            IncludeUppercase: GenUppercase,
+            IncludeLowercase: GenLowercase,
+            IncludeDigits: GenDigits,
+            IncludeSymbols: GenSymbols,
+            ExcludeAmbiguous: GenExcludeAmbiguous));
 }
