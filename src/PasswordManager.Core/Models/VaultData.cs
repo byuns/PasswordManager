@@ -3,7 +3,10 @@ namespace PasswordManager.Core.Models;
 /// <summary>복호화된 볼트 본문의 최상위 구조. design 6. version은 마이그레이션 기준.</summary>
 public sealed class VaultData
 {
-    public int Version { get; set; } = 1;
+    /// <summary>현재 앱이 쓰는 볼트 스키마 버전. 구조 변경 시 올리고 <see cref="VaultMigrator"/>에 변환 단계를 추가한다(TD-008).</summary>
+    public const int CurrentVersion = 1;
+
+    public int Version { get; set; } = CurrentVersion;
     public List<VaultEntry> Entries { get; set; } = new();
 
     /// <summary>앱 잠금해제 2FA용 TOTP secret(RFC4648 Base32). 미등록이면 null. design 5.4·TD-004.</summary>
