@@ -88,6 +88,8 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.AddRequested += OnAddRequested;
             _main.EditRequested += OnEditRequested;
             _main.ChangeMasterRequested += OnChangeMasterRequested;
+            _main.OtpSetupRequested += OnOtpSetupRequested;
+            _main.RevealRequested += OnRevealRequested;
         }
         else
         {
@@ -104,6 +106,8 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.AddRequested -= OnAddRequested;
             _main.EditRequested -= OnEditRequested;
             _main.ChangeMasterRequested -= OnChangeMasterRequested;
+            _main.OtpSetupRequested -= OnOtpSetupRequested;
+            _main.RevealRequested -= OnRevealRequested;
             _main = null;
         }
         StartUnlock();
@@ -147,6 +151,39 @@ public sealed partial class ShellViewModel : ObservableObject
             editor.Saved -= OnEditorFinished;
             editor.Cancelled -= OnEditorFinished;
         }
+        ShowMain();
+    }
+
+    private void OnOtpSetupRequested(object? sender, EventArgs e)
+    {
+        var vm = new OtpSetupViewModel(_vault);
+        vm.Completed += OnOtpSetupFinished;
+        vm.Cancelled += OnOtpSetupFinished;
+        CurrentViewModel = vm;
+    }
+
+    private void OnOtpSetupFinished(object? sender, EventArgs e)
+    {
+        if (sender is OtpSetupViewModel vm)
+        {
+            vm.Completed -= OnOtpSetupFinished;
+            vm.Cancelled -= OnOtpSetupFinished;
+        }
+        ShowMain();
+    }
+
+    private void OnRevealRequested(object? sender, VaultEntry entry)
+    {
+        // 검증 성공 시 게이트 화면이 그 자리에서 비밀번호를 보여주고, 닫기(취소)로 메인에 복귀한다.
+        var vm = new OtpGateViewModel(_vault, entry);
+        vm.Cancelled += OnGateClosed;
+        CurrentViewModel = vm;
+    }
+
+    private void OnGateClosed(object? sender, EventArgs e)
+    {
+        if (sender is OtpGateViewModel vm)
+            vm.Cancelled -= OnGateClosed;
         ShowMain();
     }
 }

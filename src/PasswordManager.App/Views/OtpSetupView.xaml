@@ -1,0 +1,38 @@
+<UserControl x:Class="PasswordManager.App.Views.OtpSetupView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:PasswordManager.ViewModels;assembly=PasswordManager.ViewModels"
+             d:DataContext="{d:DesignInstance vm:OtpSetupViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <Grid MaxWidth="480" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+        <StackPanel>
+            <ui:TextBlock FontTypography="Title" Text="OTP 등록" Margin="0,0,0,8" />
+            <ui:TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Text="폰의 Authenticator 앱에 아래 secret(또는 otpauth 링크)을 등록한 뒤, 앱에 표시되는 6자리 코드를 입력해 확인하세요."
+                          Margin="0,0,0,16" />
+
+            <ui:TextBlock Text="Secret" Margin="0,0,0,4" />
+            <ui:TextBox Text="{Binding Secret, Mode=OneWay}" IsReadOnly="True" />
+
+            <ui:TextBlock Text="otpauth 링크" Margin="0,12,0,4" />
+            <ui:TextBox Text="{Binding OtpAuthUri, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" />
+
+            <ui:TextBlock Text="확인 코드 (6자리)" Margin="0,16,0,4" />
+            <ui:TextBox Text="{Binding VerificationCode, UpdateSourceTrigger=PropertyChanged}"
+                        MaxLength="8" PlaceholderText="123456" />
+
+            <ui:TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                          Text="{Binding ErrorMessage}"
+                          Visibility="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToVisibility}}"
+                          TextWrapping="Wrap" Margin="0,8,0,0" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <ui:Button Content="취소" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
+                <ui:Button Content="확인" Appearance="Primary" Command="{Binding ConfirmCommand}" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

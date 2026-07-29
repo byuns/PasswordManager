@@ -29,7 +29,15 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteCommand))]
     [NotifyCanExecuteChangedFor(nameof(EditCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RevealCommand))]
     private VaultEntry? _selectedEntry;
+
+    /// <summary>사용자에게 보여줄 일시 안내(예: OTP 미등록 시 열람 안내). design 5.4.</summary>
+    [ObservableProperty]
+    private string? _statusMessage;
+
+    /// <summary>앱 잠금해제 OTP가 등록되어 있는가(열람 게이트 사용 여부, 등록 버튼 표시용).</summary>
+    public bool IsOtpRegistered => _vault.HasOtp;
 
     /// <summary>볼트가 잠겼을 때 발생. 셸이 구독해 언락 화면으로 돌아간다.</summary>
     public event EventHandler? Locked;
@@ -42,6 +50,12 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>마스터 비밀번호 변경 요청. 셸이 변경 화면을 연다.</summary>
     public event EventHandler? ChangeMasterRequested;
+
+    /// <summary>OTP 등록(재설정) 요청. 셸이 등록 마법사를 연다.</summary>
+    public event EventHandler? OtpSetupRequested;
+
+    /// <summary>선택 항목 비밀번호 열람 요청. 셸이 OTP 게이트를 연다(design 7.4).</summary>
+    public event EventHandler<VaultEntry>? RevealRequested;
 
     partial void OnSearchQueryChanged(string value) => Refresh();
 
@@ -58,6 +72,8 @@ public sealed partial class MainViewModel : ObservableObject
         Entries.Clear();
         foreach (var entry in source)
             Entries.Add(entry);
+
+        OnPropertyChanged(nameof(IsOtpRegistered));
     }
 
     private bool HasSelection() => SelectedEntry is not null;
@@ -78,6 +94,22 @@ public sealed partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void ChangeMasterPassword() => ChangeMasterRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void SetupOtp() => OtpSetupRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void Reveal()
+    {
+        StatusMessage = null;
+        if (!_vault.HasOtp)
+        {
+            // design R5·7.4: 열람은 OTP 게이트를 거친다. 미등록이면 먼저 등록을 안내한다.
+            StatusMessage = "비밀번호를 보려면 먼저 OTP를 등록하세요.";
+            return;
+        }
+        RevealRequested?.Invoke(this, SelectedEntry!);
+    }
 
     [RelayCommand]
     private void Lock()

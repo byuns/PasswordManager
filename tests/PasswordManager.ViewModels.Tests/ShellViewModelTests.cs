@@ -222,4 +222,65 @@ public class ShellViewModelTests
 
         Assert.Same(main, shell.CurrentViewModel);
     }
+
+    // --- OTP 등록 마법사 / 열람 게이트 내비게이션 (design 5.4·7.4) ---
+
+    /// <summary>셸을 열고 OTP 등록 마법사를 통해 OTP를 등록한 뒤 메인으로 복귀한다.</summary>
+    private static async Task<(ShellViewModel shell, MainViewModel main)> OpenedShellWithOtpAsync()
+    {
+        var (shell, main) = await OpenedShellAsync();
+        main.SetupOtpCommand.Execute(null);
+        var wizard = Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel);
+        wizard.VerificationCode = TotpValidator.GenerateCode(wizard.Secret, DateTimeOffset.UtcNow);
+        wizard.ConfirmCommand.Execute(null);
+        return (shell, main);
+    }
+
+    [Fact]
+    public async Task Otp_setup_request_opens_wizard()
+    {
+        var (shell, main) = await OpenedShellAsync();
+
+        main.SetupOtpCommand.Execute(null);
+
+        Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel);
+    }
+
+    [Fact]
+    public async Task Otp_setup_complete_returns_to_main_and_marks_registered()
+    {
+        var (shell, main) = await OpenedShellWithOtpAsync();
+
+        Assert.Same(main, shell.CurrentViewModel);
+        Assert.True(main.IsOtpRegistered);
+    }
+
+    [Fact]
+    public async Task Cancel_otp_setup_returns_to_main()
+    {
+        var (shell, main) = await OpenedShellAsync();
+        main.SetupOtpCommand.Execute(null);
+        var wizard = Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel);
+
+        wizard.CancelCommand.Execute(null);
+
+        Assert.Same(main, shell.CurrentViewModel);
+    }
+
+    [Fact]
+    public async Task Reveal_request_opens_gate_and_cancel_returns_to_main()
+    {
+        var (shell, main) = await OpenedShellWithOtpAsync();
+        main.NewEntryCommand.Execute(null);
+        var editor = Assert.IsType<EntryEditViewModel>(shell.CurrentViewModel);
+        editor.Title = "Steam";
+        editor.SaveCommand.Execute(null);
+        main.SelectedEntry = main.Entries[0];
+
+        main.RevealCommand.Execute(null);
+        var gate = Assert.IsType<OtpGateViewModel>(shell.CurrentViewModel);
+        gate.CancelCommand.Execute(null);
+
+        Assert.Same(main, shell.CurrentViewModel);
+    }
 }

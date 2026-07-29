@@ -15,25 +15,40 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ui:TextBox Grid.Column="0" PlaceholderText="검색 (제목·아이디)"
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
             <ui:Button Grid.Column="1" Content="새 항목" Icon="{ui:SymbolIcon Add24}"
                        Appearance="Primary" Margin="8,0,0,0" Command="{Binding NewEntryCommand}" />
-            <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Key24}" ToolTip="마스터 비밀번호 변경"
+            <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon ShieldKeyhole24}"
+                       ToolTip="OTP 등록/재설정 (2단계 인증)"
+                       Margin="8,0,0,0" Command="{Binding SetupOtpCommand}" />
+            <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Key24}" ToolTip="마스터 비밀번호 변경"
                        Margin="8,0,0,0" Command="{Binding ChangeMasterPasswordCommand}" />
-            <ui:Button Grid.Column="3" Content="잠금" Icon="{ui:SymbolIcon LockClosed24}"
+            <ui:Button Grid.Column="4" Content="잠금" Icon="{ui:SymbolIcon LockClosed24}"
                        Margin="8,0,0,0" Command="{Binding LockCommand}" />
         </Grid>
 
         <!-- 하단 동작 버튼 -->
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                    HorizontalAlignment="Right" Margin="0,12,0,0">
-            <ui:Button Content="편집" Icon="{ui:SymbolIcon Edit24}"
-                       Command="{Binding EditCommand}" Margin="0,0,8,0" />
-            <ui:Button Content="삭제" Icon="{ui:SymbolIcon Delete24}"
-                       Appearance="Danger" Command="{Binding DeleteCommand}" />
-        </StackPanel>
+        <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:TextBlock Grid.Column="0" VerticalAlignment="Center"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Text="{Binding StatusMessage}" TextWrapping="Wrap"
+                          Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button Content="보기" Icon="{ui:SymbolIcon Eye24}"
+                           Command="{Binding RevealCommand}" Margin="0,0,8,0" />
+                <ui:Button Content="편집" Icon="{ui:SymbolIcon Edit24}"
+                           Command="{Binding EditCommand}" Margin="0,0,8,0" />
+                <ui:Button Content="삭제" Icon="{ui:SymbolIcon Delete24}"
+                           Appearance="Danger" Command="{Binding DeleteCommand}" />
+            </StackPanel>
+        </Grid>
 
         <!-- 항목 목록 -->
         <ListView ItemsSource="{Binding Entries}"

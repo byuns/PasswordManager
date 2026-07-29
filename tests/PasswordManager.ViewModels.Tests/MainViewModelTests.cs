@@ -136,4 +136,70 @@ public class MainViewModelTests
 
         Assert.True(raised);
     }
+
+    // --- OTP 등록 요청 / 열람 게이트 (design 5.4·7.4) ---
+
+    [Fact]
+    public void SetupOtp_raises_OtpSetupRequested()
+    {
+        var vm = new MainViewModel(UnlockedWith());
+        var raised = false;
+        vm.OtpSetupRequested += (_, _) => raised = true;
+
+        vm.SetupOtpCommand.Execute(null);
+
+        Assert.True(raised);
+    }
+
+    [Fact]
+    public void IsOtpRegistered_reflects_vault_state_after_refresh()
+    {
+        var manager = UnlockedWith();
+        var vm = new MainViewModel(manager);
+        Assert.False(vm.IsOtpRegistered);
+
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        vm.Refresh();
+
+        Assert.True(vm.IsOtpRegistered);
+    }
+
+    [Fact]
+    public void Reveal_disabled_without_selection()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
+        Assert.False(vm.RevealCommand.CanExecute(null));
+
+        vm.SelectedEntry = vm.Entries[0];
+        Assert.True(vm.RevealCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Reveal_without_otp_shows_hint_and_does_not_request()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
+        vm.SelectedEntry = vm.Entries[0];
+        VaultEntry? requested = null;
+        vm.RevealRequested += (_, e) => requested = e;
+
+        vm.RevealCommand.Execute(null);
+
+        Assert.Null(requested);
+        Assert.False(string.IsNullOrEmpty(vm.StatusMessage));
+    }
+
+    [Fact]
+    public void Reveal_with_otp_raises_RevealRequested_with_selected_entry()
+    {
+        var manager = UnlockedWith(("Steam", "gamer"));
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        var vm = new MainViewModel(manager);
+        vm.SelectedEntry = vm.Entries[0];
+        VaultEntry? requested = null;
+        vm.RevealRequested += (_, e) => requested = e;
+
+        vm.RevealCommand.Execute(null);
+
+        Assert.Same(vm.SelectedEntry, requested);
+    }
 }
