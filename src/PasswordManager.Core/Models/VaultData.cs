@@ -5,6 +5,9 @@ public sealed class VaultData
 {
     public int Version { get; set; } = 1;
     public List<VaultEntry> Entries { get; set; } = new();
+
+    /// <summary>앱 잠금해제 2FA용 TOTP secret(RFC4648 Base32). 미등록이면 null. design 5.4·TD-004.</summary>
+    public string? AppTotpSecret { get; set; }
 }
 
 /// <summary>계정 항목 하나. 같은 사이트의 여러 계정은 각각 독립 Entry. design 6.</summary>

@@ -142,4 +142,93 @@ public class VaultManagerTests
         Assert.False(m.IsUnlocked);
         Assert.Throws<InvalidOperationException>(() => m.Add(NewEntry()));
     }
+
+    // --- 앱 잠금해제 OTP 게이트 (design 5.4, TD-004) ---
+
+    private static readonly DateTimeOffset FixedNow = DateTimeOffset.FromUnixTimeSeconds(1_600_000_000L);
+
+    [Fact]
+    public void Otp_is_not_registered_on_new_vault()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+
+        Assert.False(m.HasOtp);
+    }
+
+    [Fact]
+    public void SetupOtp_registers_and_returns_verifiable_secret()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+
+        var secret = m.SetupOtp();
+        var code = TotpValidator.GenerateCode(secret, FixedNow);
+
+        Assert.True(m.HasOtp);
+        Assert.True(m.VerifyOtp(code, FixedNow));
+    }
+
+    [Fact]
+    public void SetupOtp_secret_persists_across_reopen()
+    {
+        var store = new InMemoryStore();
+        var m1 = new VaultManager(store, Path);
+        m1.CreateNew(Master, Light);
+        var secret = m1.SetupOtp();
+
+        var m2 = new VaultManager(store, Path);
+        m2.Open(Master);
+
+        Assert.True(m2.HasOtp);
+        Assert.True(m2.VerifyOtp(TotpValidator.GenerateCode(secret, FixedNow), FixedNow));
+    }
+
+    [Fact]
+    public void VerifyOtp_rejects_wrong_code()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+        m.SetupOtp();
+
+        Assert.False(m.VerifyOtp("000000", FixedNow));
+    }
+
+    [Fact]
+    public void VerifyOtp_before_setup_throws()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+
+        Assert.Throws<InvalidOperationException>(() => m.VerifyOtp("123456", FixedNow));
+    }
+
+    [Fact]
+    public void SetupOtp_before_unlock_throws()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+
+        Assert.Throws<InvalidOperationException>(() => m.SetupOtp());
+    }
+
+    [Fact]
+    public void SetupOtp_called_again_rotates_secret()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+
+        var first = m.SetupOtp();
+        var second = m.SetupOtp();
+
+        Assert.NotEqual(first, second);
+        // 재설정 후 예전 secret 기준 코드는 더 이상 통과하지 않는다(TD-005).
+        Assert.False(m.VerifyOtp(TotpValidator.GenerateCode(first, FixedNow), FixedNow));
+        Assert.True(m.VerifyOtp(TotpValidator.GenerateCode(second, FixedNow), FixedNow));
+    }
 }

@@ -87,6 +87,34 @@ public sealed class VaultManager
         _store.Save(_path, _current);
     }
 
+    /// <summary>앱 잠금해제 OTP가 등록되어 있는가(열람 게이트 사용 여부). design 5.4·TD-004.</summary>
+    public bool HasOtp => RequireUnlocked().AppTotpSecret is not null;
+
+    /// <summary>
+    /// 앱 잠금해제 OTP를 등록(또는 재설정)한다. 새 secret을 만들어 본문에 저장하고 반환한다.
+    /// 반환한 secret으로 등록 화면이 폰 Authenticator에 넘길 QR/otpauth URI를 만든다(TD-005 재설정 포함).
+    /// </summary>
+    public string SetupOtp()
+    {
+        var data = RequireUnlocked();
+        var secret = TotpValidator.GenerateSecret();
+        data.AppTotpSecret = secret;
+        Persist();
+        return secret;
+    }
+
+    /// <summary>입력한 OTP 코드를 검증한다(현재 시각 기준). 미등록이면 예외를 던진다.</summary>
+    public bool VerifyOtp(string code) => VerifyOtp(code, DateTimeOffset.UtcNow);
+
+    /// <summary>입력한 OTP 코드를 지정 시각 기준으로 검증한다(테스트에서 시각 고정용).</summary>
+    public bool VerifyOtp(string code, DateTimeOffset now)
+    {
+        var data = RequireUnlocked();
+        if (data.AppTotpSecret is null)
+            throw new InvalidOperationException("OTP가 등록되어 있지 않습니다. 먼저 SetupOtp로 등록하세요.");
+        return TotpValidator.Verify(data.AppTotpSecret, code, now);
+    }
+
     /// <summary>세션을 닫고 메모리의 DEK·데이터를 버린다.</summary>
     public void Lock()
     {
