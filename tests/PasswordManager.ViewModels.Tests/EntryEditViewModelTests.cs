@@ -105,6 +105,33 @@ public class EntryEditViewModelTests
     }
 
     [Fact]
+    public void GeneratePassword_fills_password_with_requested_length()
+    {
+        var vm = new EntryEditViewModel(Unlocked()) { GeneratorLength = 20 };
+
+        vm.GeneratePasswordCommand.Execute(null);
+
+        Assert.Equal(20, vm.Password.Length);
+    }
+
+    [Fact]
+    public void GeneratePassword_respects_class_toggles()
+    {
+        var vm = new EntryEditViewModel(Unlocked())
+        {
+            GeneratorLength = 16,
+            GenUppercase = false,
+            GenLowercase = false,
+            GenDigits = true,
+            GenSymbols = false,
+        };
+
+        vm.GeneratePasswordCommand.Execute(null);
+
+        Assert.All(vm.Password, c => Assert.True(char.IsDigit(c)));
+    }
+
+    [Fact]
     public void Cancel_leaves_existing_unchanged_and_raises_Cancelled()
     {
         var manager = Unlocked();
