@@ -29,6 +29,43 @@ public class MainViewModelTests
         return m;
     }
 
+    // --- 백업/복원 (M6) ---
+
+    [Fact]
+    public void Backup_and_Restore_commands_raise_requests()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
+        var backup = false; var restore = false;
+        vm.BackupRequested += (_, _) => backup = true;
+        vm.RestoreRequested += (_, _) => restore = true;
+
+        vm.BackupCommand.Execute(null);
+        vm.RestoreCommand.Execute(null);
+
+        Assert.True(backup);
+        Assert.True(restore);
+    }
+
+    [Fact]
+    public void PerformBackup_then_PerformRestore_roundtrips_and_locks()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path, Light);
+        m.CreateNew(Master, Light);
+        m.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "pw" });
+        var vm = new MainViewModel(m);
+        var locked = false;
+        vm.Locked += (_, _) => locked = true;
+
+        vm.PerformBackup("backup.dat");
+        m.Add(new VaultEntry { Title = "Later", Login = "x", Password = "pw" }); // 백업 이후 변경
+        vm.PerformRestore("backup.dat");
+
+        Assert.True(locked);            // 복원 후 잠금 화면으로
+        m.Open(Master);
+        Assert.Equal("Steam", Assert.Single(m.Entries).Title);
+    }
+
     [Fact]
     public void Loads_all_entries_on_construction()
     {
