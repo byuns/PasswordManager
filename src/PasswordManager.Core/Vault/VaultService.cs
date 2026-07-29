@@ -12,6 +12,9 @@ public sealed record EncryptedVault(VaultHeader Header, byte[] Nonce, byte[] Cip
 /// <summary>볼트 생성 결과 — 암호화 볼트 + 최초 1회 사용자에게 보여줄 복구 키(TD-010).</summary>
 public sealed record VaultCreationResult(EncryptedVault Vault, byte[] RecoveryKey);
 
+/// <summary>언락 결과 — 복호화된 본문 + 세션 동안 보유할 DEK(TD-017).</summary>
+public sealed record UnlockedVault(byte[] Content, byte[] Dek);
+
 /// <summary>마스터 비밀번호가 틀려 DEK 언래핑에 실패한 경우(design 5.3).</summary>
 public sealed class InvalidMasterPasswordException() : Exception("마스터 비밀번호가 올바르지 않습니다.");
 
@@ -51,7 +54,28 @@ public static class VaultService
 
     /// <summary>마스터 비밀번호로 볼트를 연다. 비번 오류/파일 손상을 구분해 예외를 던진다.</summary>
     public static byte[] OpenWithMaster(EncryptedVault vault, string masterPassword)
-        => DecryptBody(vault, UnwrapDekWithMaster(vault.Header, masterPassword));
+        => Unlock(vault, masterPassword).Content;
+
+    /// <summary>
+    /// 마스터 비밀번호로 볼트를 열되 DEK도 함께 반환한다(TD-017). 세션 동안 DEK를 보유하면
+    /// 저장 때마다 KDF를 다시 돌리지 않고 <see cref="SealBody"/>로 본문만 재암호화할 수 있다.
+    /// </summary>
+    public static UnlockedVault Unlock(EncryptedVault vault, string masterPassword)
+    {
+        var dek = UnwrapDekWithMaster(vault.Header, masterPassword);
+        return new UnlockedVault(DecryptBody(vault, dek), dek);
+    }
+
+    /// <summary>
+    /// 세션 DEK로 본문만 새 내용으로 재암호화한다(TD-017). 헤더(salt·KDF·마스터/복구 래핑)는
+    /// 그대로 유지하므로 마스터·복구 두 경로 모두 계속 유효하다. nonce는 매번 새로 생성한다.
+    /// </summary>
+    public static EncryptedVault SealBody(EncryptedVault vault, byte[] dek, byte[] newContent)
+    {
+        var nonce = RandomNumberGenerator.GetBytes(VaultCrypto.NonceSizeBytes);
+        var body = VaultCrypto.Encrypt(dek, nonce, newContent);
+        return vault with { Nonce = nonce, Ciphertext = body.Ciphertext, Tag = body.Tag };
+    }
 
     /// <summary>복구 키로 볼트를 연다(마스터 비번 분실 시).</summary>
     public static byte[] OpenWithRecoveryKey(EncryptedVault vault, byte[] recoveryKey)
