@@ -82,4 +82,35 @@ public class CreateVaultViewModelTests
         var decoded = RecoveryCode.Decode(vm.RecoveryKeyDisplay!);
         Assert.Equal(VaultService.RecoveryKeySizeBytes, decoded.Length);
     }
+
+    [Fact]
+    public async Task Acknowledge_is_gated_until_created_and_saved_is_checked()
+    {
+        var (vm, _) = NewVm();
+        Assert.False(vm.AcknowledgeCommand.CanExecute(null)); // 생성 전
+
+        vm.Password = "master-pass";
+        vm.ConfirmPassword = "master-pass";
+        await vm.CreateCommand.ExecuteAsync(null);
+        Assert.False(vm.AcknowledgeCommand.CanExecute(null)); // 생성됐지만 확인 체크 전
+
+        vm.RecoveryKeySaved = true;
+        Assert.True(vm.AcknowledgeCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Acknowledge_raises_Completed()
+    {
+        var (vm, _) = NewVm();
+        vm.Password = "master-pass";
+        vm.ConfirmPassword = "master-pass";
+        await vm.CreateCommand.ExecuteAsync(null);
+        vm.RecoveryKeySaved = true;
+
+        var completed = false;
+        vm.Completed += (_, _) => completed = true;
+        vm.AcknowledgeCommand.Execute(null);
+
+        Assert.True(completed);
+    }
 }
