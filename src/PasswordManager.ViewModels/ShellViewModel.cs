@@ -25,6 +25,7 @@ public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly VaultManager _vault;
     private readonly KdfParams _kdf;
+    private readonly ClipboardCopier? _clipboard;
     private MainViewModel? _main;
 
     [ObservableProperty]
@@ -33,10 +34,11 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private ObservableObject? _currentViewModel;
 
-    public ShellViewModel(VaultManager vault, KdfParams? kdf = null)
+    public ShellViewModel(VaultManager vault, KdfParams? kdf = null, ClipboardCopier? clipboard = null)
     {
         _vault = vault;
         _kdf = kdf ?? KdfParams.Recommended;
+        _clipboard = clipboard;
 
         if (_vault.Exists())
             StartUnlock();
@@ -175,7 +177,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private void OnRevealRequested(object? sender, VaultEntry entry)
     {
         // 검증 성공 시 게이트 화면이 그 자리에서 비밀번호를 보여주고, 닫기(취소)로 메인에 복귀한다.
-        var vm = new OtpGateViewModel(_vault, entry);
+        var vm = new OtpGateViewModel(_vault, entry, copier: _clipboard);
         vm.Cancelled += OnGateClosed;
         CurrentViewModel = vm;
     }

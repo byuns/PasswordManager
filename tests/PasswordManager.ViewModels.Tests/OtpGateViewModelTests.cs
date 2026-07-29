@@ -2,11 +2,24 @@ using PasswordManager.Core.Models;
 using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
 using PasswordManager.ViewModels;
+using PasswordManager.ViewModels.Services;
 
 namespace PasswordManager.ViewModels.Tests;
 
 public class OtpGateViewModelTests
 {
+    private sealed class FakeClipboard : IClipboardService
+    {
+        public string? Text { get; private set; }
+        public void SetText(string text) => Text = text;
+        public void Clear() => Text = null;
+    }
+
+    private sealed class ImmediateScheduler : IScheduler
+    {
+        public void Schedule(TimeSpan delay, Action action) { /* 예약만, 즉시 실행 안 함 */ }
+    }
+
     private static readonly KdfParams Light = new(MemoryKiB: 8192, Iterations: 2, Parallelism: 1);
     private static readonly DateTimeOffset FixedNow = DateTimeOffset.FromUnixTimeSeconds(1_600_000_000L);
     private const string Master = "correct horse battery staple";
@@ -113,6 +126,30 @@ public class OtpGateViewModelTests
         vm.RevealCommand.Execute(null);
 
         Assert.Empty(vm.RevealedHistory);
+    }
+
+    [Fact]
+    public void Copy_command_copies_given_password_to_clipboard()
+    {
+        var clip = new FakeClipboard();
+        var copier = new ClipboardCopier(clip, new ImmediateScheduler());
+        var manager = new VaultManager(new InMemoryStore(), Path);
+        manager.CreateNew(Master, Light);
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        var entry = new VaultEntry { Title = "Steam", Password = "s3cr3t" };
+        manager.Add(entry);
+        var vm = new OtpGateViewModel(manager, entry, () => FixedNow, copier);
+
+        vm.CopyCommand.Execute("s3cr3t");
+
+        Assert.Equal("s3cr3t", clip.Text);
+    }
+
+    [Fact]
+    public void Copy_command_is_noop_without_clipboard()
+    {
+        var (vm, _, _) = NewVm(); // copier 미주입
+        vm.CopyCommand.Execute("s3cr3t"); // 예외 없이 무시
     }
 
     [Fact]

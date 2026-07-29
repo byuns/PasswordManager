@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading;
 using System.Windows;
+using PasswordManager.App.Services;
 using PasswordManager.Core.Vault;
 using PasswordManager.Storage;
 using PasswordManager.ViewModels;
@@ -35,7 +36,8 @@ public partial class App : Application
         var vaultPath = Path.Combine(directory, "vault.dat");
 
         var manager = new VaultManager(new FileVaultStore(), vaultPath);
-        var shell = new ShellViewModel(manager);
+        var clipboard = new ClipboardCopier(new WpfClipboardService(), new DispatcherScheduler());
+        var shell = new ShellViewModel(manager, clipboard: clipboard);
 
         new ShellWindow { DataContext = shell }.Show();
     }

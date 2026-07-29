@@ -17,12 +17,15 @@ public sealed partial class OtpGateViewModel : ObservableObject
     private readonly VaultManager _vault;
     private readonly VaultEntry _entry;
     private readonly Func<DateTimeOffset> _now;
+    private readonly ClipboardCopier? _copier;
 
-    public OtpGateViewModel(VaultManager vault, VaultEntry entry, Func<DateTimeOffset>? now = null)
+    public OtpGateViewModel(VaultManager vault, VaultEntry entry,
+        Func<DateTimeOffset>? now = null, ClipboardCopier? copier = null)
     {
         _vault = vault;
         _entry = entry;
         _now = now ?? (() => DateTimeOffset.UtcNow);
+        _copier = copier;
     }
 
     /// <summary>어떤 항목을 여는지 화면에 보여주기 위한 제목.</summary>
@@ -75,4 +78,8 @@ public sealed partial class OtpGateViewModel : ObservableObject
 
     [RelayCommand]
     private void Cancel() => Cancelled?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>주어진 비밀번호(현재 또는 이력 항목)를 클립보드에 복사하고 자동 삭제를 예약한다(design 5.5).</summary>
+    [RelayCommand]
+    private void Copy(string? password) => _copier?.CopyWithAutoClear(password);
 }
