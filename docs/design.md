@@ -118,8 +118,9 @@ UI에는 필요한 순간에만 전달하며 사용 후 즉시 폐기한다.
    ▶ 마스터 비번 변경·KDF 강화 = ③의 마스터 쪽만 다시 감싸기 = 데이터(②) 재암호화 불필요
 ```
 
-- **KDF**: **Argon2id** (라이브러리 `Konscious.Security.Cryptography`).
-  - 대안: .NET 내장 **PBKDF2**(`Rfc2898DeriveBytes`, SHA-256, 반복 600,000+). 의존성 최소화가 목표면 이쪽.
+- **KDF**: **Argon2id** (라이브러리 `Konscious.Security.Cryptography`) — **확정(TD-015)**.
+  - 파라미터(초기 권장치): 메모리 64 MiB, 반복 3, 병렬성 4, 출력 32B, salt 16B. 헤더에 저장·자동 상향(7.5).
+  - 검토했던 대안: .NET 내장 **PBKDF2**. 의존성은 0이나 memory-hard가 아니라 오프라인 크래킹 저항이 약해 배제(TD-015).
 - **대칭 암호화**: **AES-256-GCM** (.NET 내장 `System.Security.Cryptography.AesGcm`).
   - GCM은 암호화와 동시에 **인증 태그**를 생성 → 파일이 변조되면 복호화 자체가 실패.
 - **2단 키(KEK/DEK)**: 데이터는 랜덤 **데이터키(DEK)**로 암호화하고, 그 DEK를 마스터키(KEK)로 감싸 헤더에 저장.
@@ -443,7 +444,7 @@ PasswordManager/
 
 | 목적 | 라이브러리 |
 |---|---|
-| KDF (Argon2id) | Konscious.Security.Cryptography *(또는 내장 PBKDF2)* |
+| KDF (Argon2id) | Konscious.Security.Cryptography *(확정 — TD-015)* |
 | 대칭 암호화 | .NET 내장 `System.Security.Cryptography.AesGcm` |
 | TOTP 검증/생성 | Otp.NET |
 | QR 생성 | QRCoder |
