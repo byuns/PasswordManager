@@ -126,4 +126,63 @@ public class VaultServiceTests
         Assert.Throws<InvalidMasterPasswordException>(
             () => VaultService.ChangeMasterPassword(result.Vault, "wrong-current", "new-master", Light));
     }
+
+    [Fact]
+    public void Unlock_returns_content_and_dek()
+    {
+        var content = Content();
+        var result = VaultService.Create(Master, content, Light);
+
+        var session = VaultService.Unlock(result.Vault, Master);
+
+        Assert.Equal(content, session.Content);
+        Assert.Equal(VaultCrypto.KeySizeBytes, session.Dek.Length);
+    }
+
+    [Fact]
+    public void Unlock_with_wrong_password_throws_InvalidMasterPassword()
+    {
+        var result = VaultService.Create(Master, Content(), Light);
+
+        Assert.Throws<InvalidMasterPasswordException>(
+            () => VaultService.Unlock(result.Vault, "wrong-password"));
+    }
+
+    [Fact]
+    public void SealBody_updates_content_readable_with_same_master()
+    {
+        var result = VaultService.Create(Master, Content(), Light);
+        var session = VaultService.Unlock(result.Vault, Master);
+        var newContent = Encoding.UTF8.GetBytes("""{"entries":["updated"]}""");
+
+        var resealed = VaultService.SealBody(result.Vault, session.Dek, newContent);
+
+        Assert.Equal(newContent, VaultService.OpenWithMaster(resealed, Master));
+    }
+
+    [Fact]
+    public void SealBody_keeps_header_so_recovery_key_still_works()
+    {
+        var result = VaultService.Create(Master, Content(), Light);
+        var session = VaultService.Unlock(result.Vault, Master);
+        var newContent = Encoding.UTF8.GetBytes("""{"entries":["updated"]}""");
+
+        var resealed = VaultService.SealBody(result.Vault, session.Dek, newContent);
+
+        Assert.Equal(newContent, VaultService.OpenWithRecoveryKey(resealed, result.RecoveryKey));
+    }
+
+    [Fact]
+    public void SealBody_uses_fresh_nonce_each_time()
+    {
+        var result = VaultService.Create(Master, Content(), Light);
+        var session = VaultService.Unlock(result.Vault, Master);
+        var body = Encoding.UTF8.GetBytes("same content");
+
+        var a = VaultService.SealBody(result.Vault, session.Dek, body);
+        var b = VaultService.SealBody(result.Vault, session.Dek, body);
+
+        Assert.NotEqual(a.Nonce, b.Nonce);
+        Assert.NotEqual(a.Ciphertext, b.Ciphertext);
+    }
 }
