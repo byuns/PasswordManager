@@ -67,12 +67,20 @@ public sealed partial class EntryEditViewModel : ObservableObject
         }
         else
         {
-            _original.Title = Title;
-            _original.Url = Url;
-            _original.Login = Login;
-            _original.Password = Password;
-            _original.Notes = Notes;
-            _vault.Update(_original);
+            // 원본을 직접 수정하지 않고 새 항목을 만들어 넘긴다(TD-021). 이렇게 해야
+            // Update가 이전 비번을 비교해 이력을 적재할 수 있고, 저장 전 원본도 온전히 남는다.
+            // 생성시각·이력은 Update가 기존 항목에서 이어받으므로 여기서 넘기지 않는다.
+            _vault.Update(new VaultEntry
+            {
+                Id = _original.Id,
+                Title = Title,
+                Url = Url,
+                Login = Login,
+                Password = Password,
+                Notes = Notes,
+                Tags = _original.Tags,
+                TotpSecret = _original.TotpSecret,
+            });
         }
         Saved?.Invoke(this, EventArgs.Empty);
     }

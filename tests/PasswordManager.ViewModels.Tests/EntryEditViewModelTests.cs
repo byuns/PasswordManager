@@ -105,6 +105,40 @@ public class EntryEditViewModelTests
     }
 
     [Fact]
+    public void Save_edit_changing_password_archives_previous_into_history()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "old-pw" });
+        var existing = manager.Entries[0];
+        var id = existing.Id;
+
+        var vm = new EntryEditViewModel(manager, existing) { Password = "new-pw" };
+        vm.SaveCommand.Execute(null);
+
+        var e = manager.Get(id)!;
+        Assert.Equal("new-pw", e.Password);
+        var h = Assert.Single(e.PasswordHistory);
+        Assert.Equal("old-pw", h.Password);   // 이전 비번이 이력에 적재
+    }
+
+    [Fact]
+    public void Save_edit_does_not_mutate_original_before_update()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "old-pw" });
+        var original = manager.Entries[0];
+
+        // 편집 폼이 원본 객체를 직접 바꾸면 이력 감지가 깨지므로, 새 객체 전달을 보장한다.
+        var vm = new EntryEditViewModel(manager, original) { Title = "renamed", Password = "new-pw" };
+        vm.SaveCommand.Execute(null);
+
+        // manager가 보관하는 항목은 교체된 새 객체여야 하고, 넘겨받은 원본 참조는 그대로여야 한다.
+        Assert.NotSame(original, manager.Entries[0]);
+        Assert.Equal("Steam", original.Title);
+        Assert.Equal("old-pw", original.Password);
+    }
+
+    [Fact]
     public void GeneratePassword_fills_password_with_requested_length()
     {
         var vm = new EntryEditViewModel(Unlocked()) { GeneratorLength = 20 };

@@ -243,4 +243,99 @@ public class VaultManagerTests
         Assert.False(m.VerifyOtp(TotpValidator.GenerateCode(first, FixedNow), FixedNow));
         Assert.True(m.VerifyOtp(TotpValidator.GenerateCode(second, FixedNow), FixedNow));
     }
+
+    // --- 비밀번호 이력 (M4, TD-021) ---
+
+    /// <summary>편집 폼이 하듯 원본을 건드리지 않고 폼 값·보존 필드를 담은 새 항목을 만든다.</summary>
+    private static VaultEntry EditOf(VaultEntry stored, string newPassword) => new()
+    {
+        Id = stored.Id,
+        Title = stored.Title,
+        Url = stored.Url,
+        Login = stored.Login,
+        Password = newPassword,
+        Notes = stored.Notes,
+        Tags = stored.Tags,
+        TotpSecret = stored.TotpSecret,
+    };
+
+    [Fact]
+    public void Update_changing_password_archives_previous_password()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+        m.Add(NewEntry());                       // Password = "s3cr3t"
+        var stored = m.Entries[0];
+        var oldChangedAt = stored.LastChangedAt;
+        var oldPassword = stored.Password;
+
+        var now = DateTimeOffset.FromUnixTimeSeconds(1_700_000_000);
+        m.Update(EditOf(stored, "n3wpass"), now);
+
+        var e = m.Entries[0];
+        Assert.Equal("n3wpass", e.Password);
+        Assert.Equal(now, e.LastChangedAt);
+        var h = Assert.Single(e.PasswordHistory);
+        Assert.Equal(oldPassword, h.Password);
+        Assert.Equal(oldChangedAt, h.ChangedAt);
+    }
+
+    [Fact]
+    public void Update_without_password_change_keeps_history_and_lastchanged()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+        m.Add(NewEntry());
+        var stored = m.Entries[0];
+        var oldChangedAt = stored.LastChangedAt;
+
+        var edit = EditOf(stored, stored.Password); // 비번 그대로, 다른 필드만 변경
+        edit.Title = "renamed";
+        m.Update(edit, DateTimeOffset.FromUnixTimeSeconds(1_700_000_000));
+
+        var e = m.Entries[0];
+        Assert.Equal("renamed", e.Title);
+        Assert.Empty(e.PasswordHistory);
+        Assert.Equal(oldChangedAt, e.LastChangedAt); // 미변경이면 보존
+    }
+
+    [Fact]
+    public void Update_history_is_capped_at_5_dropping_oldest()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+        m.Add(NewEntry());                       // Password = "s3cr3t"
+        for (int i = 1; i <= 6; i++)             // pw1..pw6 로 6회 변경
+            m.Update(EditOf(m.Entries[0], $"pw{i}"),
+                     DateTimeOffset.FromUnixTimeSeconds(1_700_000_000 + i));
+
+        var e = m.Entries[0];
+        Assert.Equal("pw6", e.Password);
+        Assert.Equal(5, e.PasswordHistory.Count);          // 상한 5
+        Assert.Equal("pw5", e.PasswordHistory[0].Password); // 최신이 앞
+        Assert.Equal("pw1", e.PasswordHistory[4].Password);
+        Assert.DoesNotContain(e.PasswordHistory, h => h.Password == "s3cr3t"); // 가장 오래된 것 제거
+    }
+
+    [Fact]
+    public void Update_preserves_created_at_and_persists_history_across_reopen()
+    {
+        var store = new InMemoryStore();
+        var m1 = new VaultManager(store, Path);
+        m1.CreateNew(Master, Light);
+        m1.Add(NewEntry());
+        var createdAt = m1.Entries[0].CreatedAt;
+        m1.Update(EditOf(m1.Entries[0], "n3wpass"),
+                  DateTimeOffset.FromUnixTimeSeconds(1_700_000_000));
+
+        var m2 = new VaultManager(store, Path);
+        m2.Open(Master);
+        var e = Assert.Single(m2.Entries);
+        Assert.Equal(createdAt, e.CreatedAt);          // 생성시각 보존
+        var h = Assert.Single(e.PasswordHistory);
+        Assert.Equal("s3cr3t", h.Password);            // 이력 영속
+    }
 }

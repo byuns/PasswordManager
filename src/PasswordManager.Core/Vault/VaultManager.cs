@@ -140,15 +140,49 @@ public sealed class VaultManager
         Persist();
     }
 
-    /// <summary>항목을 수정한다. 같은 id의 기존 항목을 교체하고 수정 시각을 갱신한 뒤 저장한다.</summary>
-    public void Update(VaultEntry entry)
+    /// <summary>항목당 보관하는 비밀번호 이력 최대 개수(TD-021). 초과 시 오래된 것부터 제거.</summary>
+    public const int PasswordHistoryLimit = 5;
+
+    /// <summary>항목을 수정한다(현재 시각 기준).</summary>
+    public void Update(VaultEntry entry) => Update(entry, DateTimeOffset.UtcNow);
+
+    /// <summary>
+    /// 항목을 수정한다. 비밀번호가 바뀐 경우에만 이전 비번을 이력에 적재하고(상한 <see cref="PasswordHistoryLimit"/>,
+    /// 오래된 것부터 제거) <c>LastChangedAt</c>을 갱신한다. <c>CreatedAt</c>·<c>PasswordHistory</c>는 기존 항목
+    /// 값을 기준으로 관리하므로 입력값을 신뢰하지 않는다(TD-021). now는 테스트에서 시각 고정용.
+    /// </summary>
+    public void Update(VaultEntry entry, DateTimeOffset now)
     {
         var data = RequireUnlocked();
         var index = data.Entries.FindIndex(e => e.Id == entry.Id);
         if (index < 0)
             throw new InvalidOperationException($"수정할 항목을 찾을 수 없습니다: {entry.Id}");
 
-        entry.UpdatedAt = DateTimeOffset.UtcNow;
+        var existing = data.Entries[index];
+
+        // 생성시각과 이력은 앱이 권한을 갖는 필드 — 기존 항목 값을 이어받는다.
+        entry.CreatedAt = existing.CreatedAt;
+        entry.PasswordHistory = existing.PasswordHistory;
+
+        if (entry.Password != existing.Password)
+        {
+            // 이전 비번을 최신이 앞에 오도록 적재하고 상한을 넘으면 오래된 것부터 제거.
+            entry.PasswordHistory.Insert(0, new PasswordHistoryItem
+            {
+                Password = existing.Password,
+                ChangedAt = existing.LastChangedAt,
+            });
+            if (entry.PasswordHistory.Count > PasswordHistoryLimit)
+                entry.PasswordHistory.RemoveRange(
+                    PasswordHistoryLimit, entry.PasswordHistory.Count - PasswordHistoryLimit);
+            entry.LastChangedAt = now;
+        }
+        else
+        {
+            entry.LastChangedAt = existing.LastChangedAt;
+        }
+
+        entry.UpdatedAt = now;
         data.Entries[index] = entry;
         Persist();
     }
