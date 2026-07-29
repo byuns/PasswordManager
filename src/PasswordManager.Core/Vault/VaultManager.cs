@@ -58,6 +58,7 @@ public sealed class VaultManager
 
         _dek = session.Dek;
         _data = Deserialize(session.Content);
+        MemoryHygiene.Clear(session.Content); // 복호화된 평문 버퍼 소거(design 5.5)
 
         // 저장된 KDF가 현재 기준보다 약하면 자동으로 상향해 재저장한다(design 7.5).
         if (vault.Header.Kdf.NeedsUpgradeTo(_kdfFloor))
@@ -79,12 +80,14 @@ public sealed class VaultManager
         var vault = _store.Load(_path);
         var recoveryKey = RecoveryCode.Decode(recoveryCode);
         var reset = VaultService.ResetMasterPasswordWithRecovery(vault, recoveryKey, newMasterPassword, kdf);
+        MemoryHygiene.Clear(recoveryKey); // 복구 키 바이트 소거(design 5.5)
         _store.Save(_path, reset);
 
         var session = VaultService.Unlock(reset, newMasterPassword);
         _current = reset;
         _dek = session.Dek;
         _data = Deserialize(session.Content);
+        MemoryHygiene.Clear(session.Content);
     }
 
     /// <summary>
@@ -128,9 +131,10 @@ public sealed class VaultManager
         return TotpValidator.Verify(data.AppTotpSecret, code, now);
     }
 
-    /// <summary>세션을 닫고 메모리의 DEK·데이터를 버린다.</summary>
+    /// <summary>세션을 닫고 메모리의 DEK·데이터를 버린다. DEK 바이트는 0으로 소거한다(design 5.5).</summary>
     public void Lock()
     {
+        MemoryHygiene.Clear(_dek);
         _dek = null;
         _data = null;
         _current = null;
