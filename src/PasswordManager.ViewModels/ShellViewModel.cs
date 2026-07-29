@@ -100,6 +100,14 @@ public sealed partial class ShellViewModel : ObservableObject
         CurrentViewModel = _main;
     }
 
+    /// <summary>유휴 자동 잠금(design 5.5). 열려 있을 때만 볼트를 잠그고 언락 화면으로 돌아간다.</summary>
+    public void AutoLock()
+    {
+        if (State != ShellState.Open) return;
+        _vault.Lock();
+        OnLocked(this, EventArgs.Empty);
+    }
+
     private void OnLocked(object? sender, EventArgs e)
     {
         if (_main is not null)

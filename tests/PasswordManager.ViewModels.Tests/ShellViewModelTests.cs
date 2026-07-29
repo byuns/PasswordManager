@@ -40,6 +40,37 @@ public class ShellViewModelTests
     }
 
     [Fact]
+    public async Task AutoLock_when_open_locks_vault_and_returns_to_unlock()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        var vault = new VaultManager(store, Path);
+        var shell = new ShellViewModel(vault, Light);
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.Password = Master;
+        await unlock.UnlockCommand.ExecuteAsync(null);
+        Assert.Equal(ShellState.Open, shell.State);
+
+        shell.AutoLock();
+
+        Assert.False(vault.IsUnlocked);
+        Assert.Equal(ShellState.Unlocking, shell.State);
+        Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+    }
+
+    [Fact]
+    public void AutoLock_is_noop_when_not_open()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        var shell = new ShellViewModel(new VaultManager(store, Path), Light); // 언락 화면 상태
+
+        shell.AutoLock(); // 예외 없이 무시
+
+        Assert.Equal(ShellState.Unlocking, shell.State);
+    }
+
+    [Fact]
     public async Task Successful_unlock_transitions_to_open()
     {
         var store = new InMemoryStore();
