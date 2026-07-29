@@ -4,6 +4,60 @@
 
 ---
 
+## TD-020. OTP 등록 화면의 secret 전달: QR 이미지 vs 텍스트/otpauth URI
+
+- **결정일**: 2026-07-29
+- **결정**: ✅ **secret 텍스트 + `otpauth://` URI 먼저(QR 이미지 렌더링은 UI 폴리싱 단계로)**
+- **상태**: 확정(잠정 — QR 이미지는 후속)
+
+> 쉬운 말: 폰 Authenticator에 등록할 때 보통 QR을 찍지만, 지금은 화면 외형을 나중에
+> 손보기로 했으므로(기능 우선) 우선 secret 문자열과 `otpauth://` 링크를 텍스트로 보여주고
+> 폰에 수동 입력하게 한다. QR 이미지는 UI 다듬기 단계에서 추가한다.
+
+### 선택지 비교
+
+| 선택지 | 내용 | 트레이드오프 |
+|---|---|---|
+| A. 텍스트/otpauth URI *(채택)* | secret 문자열·`otpauth://totp/...` URI를 텍스트로 표시 | 의존성 0, 기능 검증 빠름. 폰 수동 입력 필요 |
+| B. QRCoder로 QR 이미지 | QR 스캔 등록 | 사용자 편의↑. QRCoder NuGet + WPF 이미지 렌더 필요, UI 작업 선행 |
+
+### 결정 근거
+- 현재 **기능 구현 우선, UI 외형은 마지막** 기조와 일치.
+- `otpauth://` URI는 표준이라 폰 앱에서 수동 등록 가능 → 기능 검증에 충분.
+- QR 이미지(QRCoder)는 UI 폴리싱 단계에서 B로 승격.
+
+---
+
+## TD-019. TOTP 코드 계산·검증 구현: 직접 구현 vs Otp.NET
+
+- **결정일**: 2026-07-29
+- **결정**: ✅ **.NET 내장 `HMACSHA1`으로 RFC 6238 직접 구현(의존성 0)**
+- **상태**: 확정
+
+> 쉬운 말: 폰 Authenticator가 만드는 6자리 코드는 표준(RFC 6238) 계산식이 정해져 있다.
+> 외부 라이브러리를 쓰지 않고 .NET에 이미 있는 암호 함수로 그 계산식을 그대로 옮겨 담았다.
+
+### 배경
+design 10장은 후보로 `Otp.NET`을 적었으나, TOTP는 HMAC-SHA1 + 동적 절단이라는 짧고
+표준화된 계산이라 직접 구현이 현실적이다. 이 앱은 TD-001에서 **의존성 최소화**를 기조로 삼는다.
+
+### 선택지 비교
+
+| 선택지 | 내용 | 트레이드오프 |
+|---|---|---|
+| A. 직접 구현 *(채택)* | 내장 `HMACSHA1` + RFC 4226 동적 절단, RFC4648 Base32 코덱 | 의존성 0, 코드 ~40줄, RFC 6238 벡터로 검증. 직접 유지보수 |
+| B. Otp.NET | 검증된 외부 라이브러리 | 새 NuGet 의존성. 기능은 동일 |
+
+### 결정 근거
+- RFC 6238 Appendix B 테스트 벡터 6종으로 정확성 검증 → 표준 준수 확인.
+- Google Authenticator 호환을 위해 secret은 RFC4648 Base32(복구 키의 Crockford Base32와 별개, TD-018).
+- 시계 오차는 앞뒤 1스텝(±30초) 허용(design 5.4).
+
+### 후속 조치
+- `PasswordManager.Core.Security.TotpValidator`(`GenerateSecret`/`GenerateCode`/`Verify`) 추가, RFC 벡터·skew·오입력 단위 테스트.
+
+---
+
 ## TD-018. 복구 키 표시 인코딩: Crockford Base32 vs Base64/Hex
 
 - **결정일**: 2026-07-29
