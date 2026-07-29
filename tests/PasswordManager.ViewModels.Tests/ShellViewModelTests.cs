@@ -146,4 +146,52 @@ public class ShellViewModelTests
         Assert.Equal(ShellState.Unlocking, shell.State);
         Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
     }
+
+    [Fact]
+    public void Forgot_password_shows_recovery_flow()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        var shell = new ShellViewModel(new VaultManager(store, Path), Light);
+
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.ForgotPasswordCommand.Execute(null);
+
+        Assert.IsType<RecoveryViewModel>(shell.CurrentViewModel);
+    }
+
+    [Fact]
+    public async Task Successful_recovery_transitions_to_main()
+    {
+        var store = new InMemoryStore();
+        var recoveryKey = new VaultManager(store, Path).CreateNew(Master, Light);
+        var shell = new ShellViewModel(new VaultManager(store, Path), Light);
+
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.ForgotPasswordCommand.Execute(null);
+        var recovery = Assert.IsType<RecoveryViewModel>(shell.CurrentViewModel);
+        recovery.RecoveryCodeInput = RecoveryCode.Encode(recoveryKey);
+        recovery.NewPassword = "new-master";
+        recovery.ConfirmPassword = "new-master";
+        await recovery.RecoverCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShellState.Open, shell.State);
+        Assert.IsType<MainViewModel>(shell.CurrentViewModel);
+    }
+
+    [Fact]
+    public void Cancel_recovery_returns_to_unlock()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        var shell = new ShellViewModel(new VaultManager(store, Path), Light);
+
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.ForgotPasswordCommand.Execute(null);
+        var recovery = Assert.IsType<RecoveryViewModel>(shell.CurrentViewModel);
+        recovery.CancelCommand.Execute(null);
+
+        Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        Assert.Equal(ShellState.Unlocking, shell.State);
+    }
 }

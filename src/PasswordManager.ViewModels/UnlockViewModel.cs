@@ -29,6 +29,12 @@ public sealed partial class UnlockViewModel : ObservableObject
     /// <summary>언락 성공 시 발생. 셸이 구독해 메인 화면으로 전환한다.</summary>
     public event EventHandler? Unlocked;
 
+    /// <summary>"비밀번호를 잊으셨나요?" 요청. 셸이 복구 화면으로 전환한다(design 5.7).</summary>
+    public event EventHandler? RecoveryRequested;
+
+    [RelayCommand]
+    private void ForgotPassword() => RecoveryRequested?.Invoke(this, EventArgs.Empty);
+
     private bool CanUnlock() => !IsBusy && !string.IsNullOrEmpty(Password);
 
     [RelayCommand(CanExecute = nameof(CanUnlock))]

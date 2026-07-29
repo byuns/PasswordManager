@@ -21,6 +21,8 @@
                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
             <ProgressBar IsIndeterminate="True" Margin="0,12,0,0"
                          Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+            <ui:HyperlinkButton Content="비밀번호를 잊으셨나요?" HorizontalAlignment="Center"
+                                Margin="0,12,0,0" Command="{Binding ForgotPasswordCommand}" />
         </StackPanel>
     </Grid>
 </UserControl>

@@ -59,6 +59,23 @@ public sealed class VaultManager
         _data = Deserialize(session.Content);
     }
 
+    /// <summary>
+    /// 복구 키(문자열)로 마스터 비밀번호를 재설정하고 새 비번으로 세션을 연다(design 5.7).
+    /// 복구 키가 형식에 맞지 않거나 틀리면 예외를 던진다.
+    /// </summary>
+    public void Recover(string recoveryCode, string newMasterPassword, KdfParams kdf)
+    {
+        var vault = _store.Load(_path);
+        var recoveryKey = RecoveryCode.Decode(recoveryCode);
+        var reset = VaultService.ResetMasterPasswordWithRecovery(vault, recoveryKey, newMasterPassword, kdf);
+        _store.Save(_path, reset);
+
+        var session = VaultService.Unlock(reset, newMasterPassword);
+        _current = reset;
+        _dek = session.Dek;
+        _data = Deserialize(session.Content);
+    }
+
     /// <summary>세션을 닫고 메모리의 DEK·데이터를 버린다.</summary>
     public void Lock()
     {

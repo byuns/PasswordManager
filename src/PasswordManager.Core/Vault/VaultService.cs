@@ -92,6 +92,31 @@ public static class VaultService
         return DecryptBody(vault, dek);
     }
 
+    /// <summary>
+    /// 복구 키로 마스터 비밀번호를 재설정한다(분실 복구, design 5.7). 복구 키로 DEK를 풀어
+    /// 새 마스터키로 다시 감싼다. 본문·복구 래핑은 그대로 유지한다(현재 마스터 비번 불필요).
+    /// </summary>
+    public static EncryptedVault ResetMasterPasswordWithRecovery(
+        EncryptedVault vault, byte[] recoveryKey, string newMasterPassword, KdfParams newKdf)
+    {
+        byte[] dek;
+        try
+        {
+            dek = KeyWrap.Unwrap(recoveryKey, vault.Header.DekByRecovery);
+        }
+        catch (AuthenticationTagMismatchException)
+        {
+            throw new InvalidRecoveryKeyException();
+        }
+
+        var newSalt = KeyDerivation.NewSalt();
+        var newKek = KeyDerivation.DeriveKey(newMasterPassword, newSalt, newKdf);
+        var newDekByMaster = KeyWrap.Wrap(newKek, dek);
+
+        var newHeader = vault.Header with { Salt = newSalt, Kdf = newKdf, DekByMaster = newDekByMaster };
+        return vault with { Header = newHeader };
+    }
+
     /// <summary>마스터 비밀번호를 바꾼다. DEK를 새 마스터키로 다시 감싸기만 하며 본문은 재암호화하지 않는다.</summary>
     public static EncryptedVault ChangeMasterPassword(
         EncryptedVault vault, string currentMasterPassword, string newMasterPassword, KdfParams newKdf)

@@ -1,0 +1,40 @@
+<UserControl x:Class="PasswordManager.App.Views.RecoveryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:PasswordManager.ViewModels;assembly=PasswordManager.ViewModels"
+             d:DataContext="{d:DesignInstance vm:RecoveryViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <Grid MaxWidth="420" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+        <StackPanel>
+            <ui:TextBlock FontTypography="Title" Text="비밀번호 복구" Margin="0,0,0,8" />
+            <ui:TextBlock TextWrapping="Wrap" Margin="0,0,0,16"
+                          Text="보관해 둔 복구 키를 입력하고 새 마스터 비밀번호를 설정하세요." />
+
+            <ui:TextBlock Text="복구 키" Margin="0,0,0,4" />
+            <ui:TextBox Text="{Binding RecoveryCodeInput, UpdateSourceTrigger=PropertyChanged}"
+                        PlaceholderText="XXXX-XXXX-…" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56" />
+
+            <ui:TextBlock Text="새 마스터 비밀번호" Margin="0,12,0,4" />
+            <PasswordBox x:Name="NewPasswordInput" PasswordChanged="NewPasswordInput_PasswordChanged" />
+
+            <ui:TextBlock Text="새 비밀번호 확인" Margin="0,12,0,4" />
+            <PasswordBox x:Name="ConfirmInput" PasswordChanged="ConfirmInput_PasswordChanged" />
+
+            <ui:TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                          Text="{Binding ErrorMessage}"
+                          Visibility="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToVisibility}}"
+                          TextWrapping="Wrap" Margin="0,8,0,0" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <ui:Button Content="취소" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
+                <ui:Button Content="복구" Appearance="Primary" Command="{Binding RecoverCommand}"
+                           IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+            </StackPanel>
+            <ProgressBar IsIndeterminate="True" Margin="0,12,0,0"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -69,6 +69,18 @@ public class UnlockViewModelTests
     }
 
     [Fact]
+    public void ForgotPassword_raises_RecoveryRequested()
+    {
+        var vm = new UnlockViewModel(ManagerWithExistingVault());
+        var raised = false;
+        vm.RecoveryRequested += (_, _) => raised = true;
+
+        vm.ForgotPasswordCommand.Execute(null);
+
+        Assert.True(raised);
+    }
+
+    [Fact]
     public async Task Unlock_clears_previous_error_on_retry()
     {
         var manager = ManagerWithExistingVault();

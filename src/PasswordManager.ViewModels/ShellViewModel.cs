@@ -48,9 +48,21 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         var vm = new UnlockViewModel(_vault);
         vm.Unlocked += OnVaultOpened;
+        vm.RecoveryRequested += OnRecoveryRequested;
         CurrentViewModel = vm;
         State = ShellState.Unlocking;
     }
+
+    private void OnRecoveryRequested(object? sender, EventArgs e)
+    {
+        var vm = new RecoveryViewModel(_vault, _kdf);
+        vm.Recovered += OnVaultOpened;
+        vm.Cancelled += OnRecoveryCancelled;
+        CurrentViewModel = vm;
+        State = ShellState.Unlocking;
+    }
+
+    private void OnRecoveryCancelled(object? sender, EventArgs e) => StartUnlock();
 
     private void StartCreate()
     {
