@@ -22,7 +22,34 @@
             <ui:TextBox Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}" />
 
             <ui:TextBlock Text="비밀번호" Margin="0,12,0,4" />
-            <PasswordBox x:Name="PasswordInput" PasswordChanged="PasswordInput_PasswordChanged" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <PasswordBox x:Name="PasswordInput" Grid.Column="0"
+                             PasswordChanged="PasswordInput_PasswordChanged" />
+                <ui:Button Grid.Column="1" Content="생성" Icon="{ui:SymbolIcon Password24}"
+                           Margin="8,0,0,0" Command="{Binding GeneratePasswordCommand}" />
+            </Grid>
+
+            <!-- 생성 옵션 -->
+            <Expander Header="생성 옵션" Margin="0,8,0,0">
+                <StackPanel Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <ui:TextBlock Text="길이" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ui:NumberBox Value="{Binding GeneratorLength, Mode=TwoWay}"
+                                      Minimum="8" Maximum="64" Width="120" />
+                    </StackPanel>
+                    <WrapPanel>
+                        <CheckBox Content="대문자" IsChecked="{Binding GenUppercase}" Margin="0,0,12,0" />
+                        <CheckBox Content="소문자" IsChecked="{Binding GenLowercase}" Margin="0,0,12,0" />
+                        <CheckBox Content="숫자" IsChecked="{Binding GenDigits}" Margin="0,0,12,0" />
+                        <CheckBox Content="기호" IsChecked="{Binding GenSymbols}" Margin="0,0,12,0" />
+                        <CheckBox Content="혼동 문자 제외" IsChecked="{Binding GenExcludeAmbiguous}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Expander>
 
             <ui:TextBlock Text="메모" Margin="0,12,0,4" />
             <ui:TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
