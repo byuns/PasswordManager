@@ -48,7 +48,7 @@
 | 언어 | **C#** | Java 경험 전이 용이 |
 | 런타임 | **.NET 8 (LTS)** | 장기 지원 |
 | UI | **WPF** + MVVM | XAML 기반 |
-| UI 테마 | **WPF-UI** 또는 MahApps.Metro | Windows 11 스타일, 다크모드 |
+| UI 테마 | **WPF-UI** *(확정 — TD-016)* | Windows 11 Fluent 스타일, 다크모드 |
 | 아키텍처 패턴 | MVVM (CommunityToolkit.Mvvm) | View / ViewModel / Model 분리 |
 
 ---

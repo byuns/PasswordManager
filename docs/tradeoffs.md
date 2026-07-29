@@ -4,6 +4,27 @@
 
 ---
 
+## TD-016. WPF UI 테마: WPF-UI vs MahApps.Metro
+
+- **결정일**: 2026-07-29
+- **결정**: ✅ **WPF-UI (Fluent / Windows 11 룩)**
+- **상태**: 확정
+
+### 선택지 비교
+
+| 선택지 | 내용 | 트레이드오프 |
+|---|---|---|
+| A. WPF-UI *(채택)* | Windows 11 Fluent 룩, 다크모드 내장 | 최신·가벼움, `ui.md` 기준과 일치. 생태계는 MahApps보다 작음 |
+| B. MahApps.Metro | 성숙한 Metro 테마 | 자료·예제 풍부하나 Windows 11 Fluent 느낌은 약함 |
+
+### 결정 근거
+- 타깃이 Windows 10/11 데스크톱이고 Fluent 룩을 원함(`ui.md` 1장) → WPF-UI가 정합.
+
+### 후속 조치
+- `design.md` 3장 확정 표기. `PasswordManager.App`에 WPF-UI 패키지 추가.
+
+---
+
 ## TD-015. KDF 알고리즘: Argon2id vs PBKDF2
 
 - **결정일**: 2026-07-29
