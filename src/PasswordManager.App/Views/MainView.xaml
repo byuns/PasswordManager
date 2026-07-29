@@ -14,12 +14,15 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ui:TextBox Grid.Column="0" PlaceholderText="검색 (제목·아이디)"
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
             <ui:Button Grid.Column="1" Content="새 항목" Icon="{ui:SymbolIcon Add24}"
                        Appearance="Primary" Margin="8,0,0,0" Command="{Binding NewEntryCommand}" />
-            <ui:Button Grid.Column="2" Content="잠금" Icon="{ui:SymbolIcon LockClosed24}"
+            <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Key24}" ToolTip="마스터 비밀번호 변경"
+                       Margin="8,0,0,0" Command="{Binding ChangeMasterPasswordCommand}" />
+            <ui:Button Grid.Column="3" Content="잠금" Icon="{ui:SymbolIcon LockClosed24}"
                        Margin="8,0,0,0" Command="{Binding LockCommand}" />
         </Grid>
 

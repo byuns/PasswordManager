@@ -76,6 +76,17 @@ public sealed class VaultManager
         _data = Deserialize(session.Content);
     }
 
+    /// <summary>
+    /// 마스터 비밀번호를 변경한다(rekey, design 7.5/TD-006). 현재 비번으로 확인 후 헤더의
+    /// 마스터 래핑만 새 비번으로 교체한다. DEK·본문·복구 래핑은 그대로라 세션은 유지된다.
+    /// </summary>
+    public void ChangeMasterPassword(string currentMasterPassword, string newMasterPassword, KdfParams kdf)
+    {
+        RequireUnlocked();
+        _current = VaultService.ChangeMasterPassword(_current!, currentMasterPassword, newMasterPassword, kdf);
+        _store.Save(_path, _current);
+    }
+
     /// <summary>세션을 닫고 메모리의 DEK·데이터를 버린다.</summary>
     public void Lock()
     {

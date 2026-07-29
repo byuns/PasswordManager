@@ -87,6 +87,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.Locked += OnLocked;
             _main.AddRequested += OnAddRequested;
             _main.EditRequested += OnEditRequested;
+            _main.ChangeMasterRequested += OnChangeMasterRequested;
         }
         else
         {
@@ -102,6 +103,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.Locked -= OnLocked;
             _main.AddRequested -= OnAddRequested;
             _main.EditRequested -= OnEditRequested;
+            _main.ChangeMasterRequested -= OnChangeMasterRequested;
             _main = null;
         }
         StartUnlock();
@@ -118,6 +120,24 @@ public sealed partial class ShellViewModel : ObservableObject
         editor.Saved += OnEditorFinished;
         editor.Cancelled += OnEditorFinished;
         CurrentViewModel = editor;
+    }
+
+    private void OnChangeMasterRequested(object? sender, EventArgs e)
+    {
+        var vm = new ChangeMasterPasswordViewModel(_vault, _kdf);
+        vm.Changed += OnChangeMasterFinished;
+        vm.Cancelled += OnChangeMasterFinished;
+        CurrentViewModel = vm;
+    }
+
+    private void OnChangeMasterFinished(object? sender, EventArgs e)
+    {
+        if (sender is ChangeMasterPasswordViewModel vm)
+        {
+            vm.Changed -= OnChangeMasterFinished;
+            vm.Cancelled -= OnChangeMasterFinished;
+        }
+        ShowMain();
     }
 
     private void OnEditorFinished(object? sender, EventArgs e)

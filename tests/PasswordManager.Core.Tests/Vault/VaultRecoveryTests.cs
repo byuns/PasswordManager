@@ -75,4 +75,46 @@ public class VaultRecoveryTests
         var m = new VaultManager(store, Path);
         Assert.Throws<InvalidRecoveryKeyException>(() => m.Recover(wrongCode, "new-master", Light));
     }
+
+    // ── VaultManager.ChangeMasterPassword (rekey) ──
+
+    [Fact]
+    public void ChangeMasterPassword_switches_master_keeps_session_data_and_recovery()
+    {
+        var store = new InMemoryStore();
+        var m1 = new VaultManager(store, Path);
+        var recoveryKey = m1.CreateNew("old-master", Light);
+        m1.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "pw" });
+
+        m1.ChangeMasterPassword("old-master", "new-master", Light);
+
+        Assert.True(m1.IsUnlocked);          // 세션 유지
+        Assert.Single(m1.Entries);           // 본문 보존
+
+        new VaultManager(store, Path).Open("new-master"); // 새 비번으로 열림(예외 없음)
+        Assert.Throws<InvalidMasterPasswordException>(() => new VaultManager(store, Path).Open("old-master"));
+        Assert.NotNull(VaultService.OpenWithRecoveryKey(store.Load(Path), recoveryKey)); // 복구 래핑 유지
+    }
+
+    [Fact]
+    public void ChangeMasterPassword_with_wrong_current_throws()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew("old-master", Light);
+
+        Assert.Throws<InvalidMasterPasswordException>(() =>
+            m.ChangeMasterPassword("wrong", "new-master", Light));
+    }
+
+    [Fact]
+    public void ChangeMasterPassword_before_unlock_throws()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew("old-master", Light);
+
+        var locked = new VaultManager(store, Path);
+        Assert.Throws<InvalidOperationException>(() =>
+            locked.ChangeMasterPassword("old-master", "new-master", Light));
+    }
 }

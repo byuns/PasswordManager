@@ -194,4 +194,32 @@ public class ShellViewModelTests
         Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
         Assert.Equal(ShellState.Unlocking, shell.State);
     }
+
+    [Fact]
+    public async Task Change_master_request_opens_editor_and_success_returns_to_main()
+    {
+        var (shell, main) = await OpenedShellAsync();
+
+        main.ChangeMasterPasswordCommand.Execute(null);
+        var change = Assert.IsType<ChangeMasterPasswordViewModel>(shell.CurrentViewModel);
+        change.CurrentPassword = Master;
+        change.NewPassword = "new-master";
+        change.ConfirmPassword = "new-master";
+        await change.ChangeCommand.ExecuteAsync(null);
+
+        Assert.Same(main, shell.CurrentViewModel);
+        Assert.Equal(ShellState.Open, shell.State);
+    }
+
+    [Fact]
+    public async Task Cancel_change_master_returns_to_main()
+    {
+        var (shell, main) = await OpenedShellAsync();
+
+        main.ChangeMasterPasswordCommand.Execute(null);
+        var change = Assert.IsType<ChangeMasterPasswordViewModel>(shell.CurrentViewModel);
+        change.CancelCommand.Execute(null);
+
+        Assert.Same(main, shell.CurrentViewModel);
+    }
 }

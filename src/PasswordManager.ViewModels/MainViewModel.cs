@@ -40,6 +40,9 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>선택 항목 편집 요청. 셸이 편집 화면을 연다.</summary>
     public event EventHandler<VaultEntry>? EditRequested;
 
+    /// <summary>마스터 비밀번호 변경 요청. 셸이 변경 화면을 연다.</summary>
+    public event EventHandler? ChangeMasterRequested;
+
     partial void OnSearchQueryChanged(string value) => Refresh();
 
     /// <summary>볼트에서 항목을 다시 읽어 검색 필터를 적용해 목록을 갱신한다.</summary>
@@ -72,6 +75,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void NewEntry() => AddRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void ChangeMasterPassword() => ChangeMasterRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private void Lock()

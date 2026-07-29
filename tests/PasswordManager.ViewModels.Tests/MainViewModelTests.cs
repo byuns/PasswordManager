@@ -124,4 +124,16 @@ public class MainViewModelTests
 
         Assert.True(raised);
     }
+
+    [Fact]
+    public void ChangeMaster_raises_ChangeMasterRequested()
+    {
+        var vm = new MainViewModel(UnlockedWith());
+        var raised = false;
+        vm.ChangeMasterRequested += (_, _) => raised = true;
+
+        vm.ChangeMasterPasswordCommand.Execute(null);
+
+        Assert.True(raised);
+    }
 }
