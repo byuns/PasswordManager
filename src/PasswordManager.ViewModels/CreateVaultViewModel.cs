@@ -38,10 +38,19 @@ public sealed partial class CreateVaultViewModel : ObservableObject
 
     /// <summary>생성 성공 시 최초 1회 표시할 복구 키(그룹 형식). 생성 전에는 null.</summary>
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AcknowledgeCommand))]
     private string? _recoveryKeyDisplay;
+
+    /// <summary>사용자가 복구 키를 안전하게 보관했음을 확인(체크)했는가 (design 7.6).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AcknowledgeCommand))]
+    private bool _recoveryKeySaved;
 
     /// <summary>볼트 생성·세션 오픈 성공 시 발생. 셸이 구독해 복구 키 확인 화면으로 넘어간다.</summary>
     public event EventHandler? Created;
+
+    /// <summary>복구 키 보관을 확인하고 다음(메인)으로 진행할 때 발생.</summary>
+    public event EventHandler? Completed;
 
     private bool CanCreate() =>
         !IsBusy && !string.IsNullOrEmpty(Password) && !string.IsNullOrEmpty(ConfirmPassword);
@@ -68,4 +77,9 @@ public sealed partial class CreateVaultViewModel : ObservableObject
             IsBusy = false;
         }
     }
+
+    private bool CanAcknowledge() => RecoveryKeyDisplay is not null && RecoveryKeySaved;
+
+    [RelayCommand(CanExecute = nameof(CanAcknowledge))]
+    private void Acknowledge() => Completed?.Invoke(this, EventArgs.Empty);
 }
