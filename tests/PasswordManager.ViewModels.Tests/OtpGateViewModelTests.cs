@@ -81,6 +81,41 @@ public class OtpGateViewModelTests
     }
 
     [Fact]
+    public void Password_history_is_hidden_before_verification()
+    {
+        var (vm, entry, _) = NewVm();
+        entry.PasswordHistory.Add(new PasswordHistoryItem { Password = "old-1", ChangedAt = FixedNow });
+
+        Assert.Empty(vm.RevealedHistory);
+    }
+
+    [Fact]
+    public void Reveal_with_valid_code_exposes_password_history()
+    {
+        var (vm, entry, secret) = NewVm();
+        entry.PasswordHistory.Add(new PasswordHistoryItem { Password = "old-2", ChangedAt = FixedNow });
+        entry.PasswordHistory.Add(new PasswordHistoryItem { Password = "old-1", ChangedAt = FixedNow });
+
+        vm.VerificationCode = TotpValidator.GenerateCode(secret, FixedNow);
+        vm.RevealCommand.Execute(null);
+
+        Assert.Equal(2, vm.RevealedHistory.Count);
+        Assert.Equal("old-2", vm.RevealedHistory[0].Password); // 순서 보존(최신이 앞)
+    }
+
+    [Fact]
+    public void Reveal_with_invalid_code_keeps_history_hidden()
+    {
+        var (vm, entry, _) = NewVm();
+        entry.PasswordHistory.Add(new PasswordHistoryItem { Password = "old-1", ChangedAt = FixedNow });
+
+        vm.VerificationCode = "000000";
+        vm.RevealCommand.Execute(null);
+
+        Assert.Empty(vm.RevealedHistory);
+    }
+
+    [Fact]
     public void Cancel_raises_Cancelled_without_revealing()
     {
         var (vm, _, _) = NewVm();

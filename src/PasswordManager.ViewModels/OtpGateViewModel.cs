@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PasswordManager.Core.Models;
@@ -26,6 +27,15 @@ public sealed partial class OtpGateViewModel : ObservableObject
 
     /// <summary>어떤 항목을 여는지 화면에 보여주기 위한 제목.</summary>
     public string Title => _entry.Title;
+
+    /// <summary>비밀번호를 마지막으로 바꾼 시각(비밀 아님, 게이트 통과 전에도 표시 가능). M4·TD-021.</summary>
+    public DateTimeOffset LastChangedAt => _entry.LastChangedAt;
+
+    /// <summary>
+    /// OTP 검증 성공 후에만 채워지는 이전 비밀번호 이력(최신이 앞). 옛 비번도 secret이므로 게이트를
+    /// 통과해야만 노출한다(TD-004·TD-021). 검증 전에는 비어 있다.
+    /// </summary>
+    public ObservableCollection<PasswordHistoryItem> RevealedHistory { get; } = new();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RevealCommand))]
@@ -57,6 +67,9 @@ public sealed partial class OtpGateViewModel : ObservableObject
         }
 
         RevealedPassword = _entry.Password;
+        RevealedHistory.Clear();
+        foreach (var item in _entry.PasswordHistory)
+            RevealedHistory.Add(item);
         Revealed?.Invoke(this, EventArgs.Empty);
     }
 

@@ -14,6 +14,7 @@
 
             <!-- 컨버터 -->
             <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility" />
+            <conv:CountToVisibilityConverter x:Key="CountToVisibility" />
             <conv:InverseBooleanConverter x:Key="InverseBool" />
             <conv:IsNewToTitleConverter x:Key="BoolToTitle" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />

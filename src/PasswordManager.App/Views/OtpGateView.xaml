@@ -27,6 +27,32 @@
                         Margin="0,12,0,0">
                 <ui:TextBlock Text="비밀번호" Margin="0,0,0,4" />
                 <ui:TextBox Text="{Binding RevealedPassword, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" />
+                <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                              Text="{Binding LastChangedAt, StringFormat='마지막 변경: {0:yyyy-MM-dd}'}"
+                              Margin="0,4,0,0" />
+
+                <!-- 이전 비밀번호 이력(옛 비번도 secret → 게이트 통과 후에만, TD-021) -->
+                <StackPanel Margin="0,12,0,0"
+                            Visibility="{Binding RevealedHistory.Count, Converter={StaticResource CountToVisibility}}">
+                    <ui:TextBlock Text="이전 비밀번호" Margin="0,0,0,4" />
+                    <ItemsControl ItemsSource="{Binding RevealedHistory}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBox Grid.Column="0" Text="{Binding Password, Mode=OneWay}"
+                                                IsReadOnly="True" FontFamily="Consolas" />
+                                    <ui:TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  Text="{Binding ChangedAt, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
