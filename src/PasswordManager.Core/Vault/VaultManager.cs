@@ -91,16 +91,18 @@ public sealed class VaultManager
     public bool HasOtp => RequireUnlocked().AppTotpSecret is not null;
 
     /// <summary>
-    /// 앱 잠금해제 OTP를 등록(또는 재설정)한다. 새 secret을 만들어 본문에 저장하고 반환한다.
-    /// 반환한 secret으로 등록 화면이 폰 Authenticator에 넘길 QR/otpauth URI를 만든다(TD-005 재설정 포함).
+    /// 앱 잠금해제 OTP secret을 등록(또는 재설정)한다. 등록 화면이 메모리에서 secret을 만들어
+    /// 폰 등록을 확인한 뒤 넘겨주면 본문에 저장한다(persist-on-confirm, TD-005 재설정 포함).
+    /// secret 생성은 <see cref="TotpValidator.GenerateSecret"/>가 담당한다.
     /// </summary>
-    public string SetupOtp()
+    public void SetOtpSecret(string secret)
     {
+        if (string.IsNullOrWhiteSpace(secret))
+            throw new ArgumentException("OTP secret이 비어 있습니다.", nameof(secret));
+
         var data = RequireUnlocked();
-        var secret = TotpValidator.GenerateSecret();
         data.AppTotpSecret = secret;
         Persist();
-        return secret;
     }
 
     /// <summary>입력한 OTP 코드를 검증한다(현재 시각 기준). 미등록이면 예외를 던진다.</summary>

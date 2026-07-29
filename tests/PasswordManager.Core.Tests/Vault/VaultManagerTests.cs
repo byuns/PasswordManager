@@ -158,26 +158,27 @@ public class VaultManagerTests
     }
 
     [Fact]
-    public void SetupOtp_registers_and_returns_verifiable_secret()
+    public void SetOtpSecret_registers_and_makes_code_verifiable()
     {
         var store = new InMemoryStore();
         var m = new VaultManager(store, Path);
         m.CreateNew(Master, Light);
 
-        var secret = m.SetupOtp();
-        var code = TotpValidator.GenerateCode(secret, FixedNow);
+        var secret = TotpValidator.GenerateSecret();
+        m.SetOtpSecret(secret);
 
         Assert.True(m.HasOtp);
-        Assert.True(m.VerifyOtp(code, FixedNow));
+        Assert.True(m.VerifyOtp(TotpValidator.GenerateCode(secret, FixedNow), FixedNow));
     }
 
     [Fact]
-    public void SetupOtp_secret_persists_across_reopen()
+    public void SetOtpSecret_persists_across_reopen()
     {
         var store = new InMemoryStore();
         var m1 = new VaultManager(store, Path);
         m1.CreateNew(Master, Light);
-        var secret = m1.SetupOtp();
+        var secret = TotpValidator.GenerateSecret();
+        m1.SetOtpSecret(secret);
 
         var m2 = new VaultManager(store, Path);
         m2.Open(Master);
@@ -187,12 +188,22 @@ public class VaultManagerTests
     }
 
     [Fact]
+    public void SetOtpSecret_rejects_empty_secret()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+
+        Assert.Throws<ArgumentException>(() => m.SetOtpSecret("  "));
+    }
+
+    [Fact]
     public void VerifyOtp_rejects_wrong_code()
     {
         var store = new InMemoryStore();
         var m = new VaultManager(store, Path);
         m.CreateNew(Master, Light);
-        m.SetupOtp();
+        m.SetOtpSecret(TotpValidator.GenerateSecret());
 
         Assert.False(m.VerifyOtp("000000", FixedNow));
     }
@@ -208,25 +219,26 @@ public class VaultManagerTests
     }
 
     [Fact]
-    public void SetupOtp_before_unlock_throws()
+    public void SetOtpSecret_before_unlock_throws()
     {
         var store = new InMemoryStore();
         var m = new VaultManager(store, Path);
 
-        Assert.Throws<InvalidOperationException>(() => m.SetupOtp());
+        Assert.Throws<InvalidOperationException>(() => m.SetOtpSecret(TotpValidator.GenerateSecret()));
     }
 
     [Fact]
-    public void SetupOtp_called_again_rotates_secret()
+    public void SetOtpSecret_called_again_rotates_secret()
     {
         var store = new InMemoryStore();
         var m = new VaultManager(store, Path);
         m.CreateNew(Master, Light);
 
-        var first = m.SetupOtp();
-        var second = m.SetupOtp();
+        var first = TotpValidator.GenerateSecret();
+        var second = TotpValidator.GenerateSecret();
+        m.SetOtpSecret(first);
+        m.SetOtpSecret(second);
 
-        Assert.NotEqual(first, second);
         // 재설정 후 예전 secret 기준 코드는 더 이상 통과하지 않는다(TD-005).
         Assert.False(m.VerifyOtp(TotpValidator.GenerateCode(first, FixedNow), FixedNow));
         Assert.True(m.VerifyOtp(TotpValidator.GenerateCode(second, FixedNow), FixedNow));
