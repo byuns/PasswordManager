@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using PasswordManager.Core.Models;
 using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
 
@@ -24,6 +25,7 @@ public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly VaultManager _vault;
     private readonly KdfParams _kdf;
+    private MainViewModel? _main;
 
     [ObservableProperty]
     private ShellState _state;
@@ -60,8 +62,59 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnVaultOpened(object? sender, EventArgs e)
     {
-        // 메인 화면 ViewModel은 후속 단계(항목 리스트)에서 연결한다.
-        CurrentViewModel = null;
+        ShowMain();
         State = ShellState.Open;
+    }
+
+    /// <summary>메인 화면을 띄운다. 최초 1회 MainViewModel을 만들고, 재진입 시엔 목록만 갱신한다.</summary>
+    private void ShowMain()
+    {
+        if (_main is null)
+        {
+            _main = new MainViewModel(_vault);
+            _main.Locked += OnLocked;
+            _main.AddRequested += OnAddRequested;
+            _main.EditRequested += OnEditRequested;
+        }
+        else
+        {
+            _main.Refresh();
+        }
+        CurrentViewModel = _main;
+    }
+
+    private void OnLocked(object? sender, EventArgs e)
+    {
+        if (_main is not null)
+        {
+            _main.Locked -= OnLocked;
+            _main.AddRequested -= OnAddRequested;
+            _main.EditRequested -= OnEditRequested;
+            _main = null;
+        }
+        StartUnlock();
+    }
+
+    private void OnAddRequested(object? sender, EventArgs e) =>
+        ShowEditor(new EntryEditViewModel(_vault));
+
+    private void OnEditRequested(object? sender, VaultEntry entry) =>
+        ShowEditor(new EntryEditViewModel(_vault, entry));
+
+    private void ShowEditor(EntryEditViewModel editor)
+    {
+        editor.Saved += OnEditorFinished;
+        editor.Cancelled += OnEditorFinished;
+        CurrentViewModel = editor;
+    }
+
+    private void OnEditorFinished(object? sender, EventArgs e)
+    {
+        if (sender is EntryEditViewModel editor)
+        {
+            editor.Saved -= OnEditorFinished;
+            editor.Cancelled -= OnEditorFinished;
+        }
+        ShowMain();
     }
 }
