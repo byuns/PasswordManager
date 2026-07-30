@@ -68,6 +68,12 @@ public sealed partial class UnlockViewModel : ObservableObject
                 ? $"마스터 비밀번호를 여러 번 틀렸습니다. {FormatDuration(locked)} 동안 잠깁니다."
                 : "마스터 비밀번호가 올바르지 않습니다.";
         }
+        catch (VaultCorruptedException)
+        {
+            // 비번은 맞지만 파일 본문 인증이 실패한 경우 = 파일 손상(design 5.3·12). 비번 시도 실패가
+            // 아니므로 재시도 제한을 올리지 않고, 비번 오류와 구분되는 복구 안내를 보여준다(S9).
+            ErrorMessage = "볼트 파일이 손상되어 열 수 없습니다. 자동 백업(vault.dat.bak)에서 복원해 보세요.";
+        }
         finally
         {
             IsBusy = false;

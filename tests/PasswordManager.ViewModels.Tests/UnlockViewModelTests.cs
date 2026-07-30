@@ -110,6 +110,35 @@ public class UnlockViewModelTests
         Assert.Equal(LockoutState.Empty, store.Load());
     }
 
+    /// <summary>본문 인증 태그를 훼손해 "비번은 맞지만 파일 손상"(VaultCorruptedException) 상황을 만든다.</summary>
+    private static byte[] FlipFirstByte(byte[] bytes)
+    {
+        var copy = (byte[])bytes.Clone();
+        copy[0] ^= 0xFF;
+        return copy;
+    }
+
+    [Fact]
+    public async Task Unlock_with_corrupted_vault_reports_corruption_and_is_not_a_failed_attempt()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        // 비번은 맞지만 본문이 손상된 파일을 만든다(태그 훼손 → DEK는 풀리나 본문 인증 실패).
+        var tampered = store.Load(Path) with { Tag = FlipFirstByte(store.Load(Path).Tag) };
+        store.Save(Path, tampered);
+
+        var manager = new VaultManager(store, Path);
+        var lockoutStore = new MemoryLockoutStore();
+        var throttle = new LoginThrottle(lockoutStore);
+        var vm = new UnlockViewModel(manager, throttle) { Password = Master };
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.False(manager.IsUnlocked);
+        Assert.Contains("손상", vm.ErrorMessage);              // 비번 오류와 구분되는 안내
+        Assert.Equal(LockoutState.Empty, lockoutStore.Load()); // 손상은 실패 시도로 세지 않음
+    }
+
     [Fact]
     public void ForgotPassword_raises_RecoveryRequested()
     {
