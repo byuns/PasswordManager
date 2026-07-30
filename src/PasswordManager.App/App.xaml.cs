@@ -37,12 +37,20 @@ public partial class App : Application
         ApplicationAccentColorManager.Apply(
             (Color)ColorConverter.ConvertFromString("#6366F1"), ApplicationTheme.Dark);
 
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var directory = Path.Combine(appData, "PasswordManager");
-        Directory.CreateDirectory(directory);
-        var vaultPath = Path.Combine(directory, "vault.dat");
+        // 볼트 경로: 기본은 %APPDATA%\PasswordManager\vault.dat. PWM_VAULT_PATH로 덮어쓸 수 있다(테스트용).
+        var vaultPath = Environment.GetEnvironmentVariable("PWM_VAULT_PATH");
+        if (string.IsNullOrWhiteSpace(vaultPath))
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            vaultPath = Path.Combine(appData, "PasswordManager", "vault.dat");
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(vaultPath)!);
 
         var manager = new VaultManager(new FileVaultStore(), vaultPath);
+
+        // 개발용 시드: PWM_SEED=1이고 볼트가 없을 때만 태그 많은 더미 데이터로 채운다(평상시 미실행).
+        if (Environment.GetEnvironmentVariable("PWM_SEED") == "1" && !manager.Exists())
+            DevSeed.Populate(manager);
         var clipboard = new ClipboardCopier(new WpfClipboardService(), new DispatcherScheduler());
         var throttle = new LoginThrottle(FileLockoutStore.ForVault(vaultPath));
         var shell = new ShellViewModel(manager, clipboard: clipboard,
