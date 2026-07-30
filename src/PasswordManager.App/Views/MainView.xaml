@@ -14,7 +14,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" PlaceholderText="검색 (제목·아이디)"
+            <ui:TextBox Grid.Column="0" PlaceholderText="검색 (사이트·아이디)"
                         Icon="{ui:SymbolIcon Search24}"
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
             <ui:Button Grid.Column="1" Content="새 항목" Icon="{ui:SymbolIcon Add24}"
@@ -49,13 +49,22 @@
                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
 
-                                <!-- 제목 + 아이디 -->
+                                <!-- 사이트명 + 아이디(옆에 복사 버튼) -->
                                 <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                                     <ui:TextBlock FontTypography="BodyStrong" Text="{Binding Title}"
                                                   TextTrimming="CharacterEllipsis" />
-                                    <ui:TextBlock FontTypography="Caption" Text="{Binding Login}"
-                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                  TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <ui:TextBlock FontTypography="Caption" Text="{Binding Login}"
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      TextTrimming="CharacterEllipsis" />
+                                        <ui:Button Padding="4" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                   Icon="{ui:SymbolIcon Copy16}" FontSize="11" ToolTip="아이디 복사"
+                                                   Visibility="{Binding Login, Converter={StaticResource StringNotEmptyToVisibility}}"
+                                                   Command="{Binding DataContext.CopyLoginCommand,
+                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding Login}" />
+                                    </StackPanel>
                                 </StackPanel>
 
                                 <!-- 마지막 변경일 + 액션 -->

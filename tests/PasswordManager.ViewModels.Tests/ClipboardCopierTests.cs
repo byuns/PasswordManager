@@ -24,6 +24,18 @@ public class ClipboardCopierTests
     }
 
     [Fact]
+    public void Plain_copy_sets_text_without_scheduling_clear()
+    {
+        var clip = new FakeClipboard();
+        var sched = new ManualScheduler();
+
+        new ClipboardCopier(clip, sched).Copy("user@example.com");
+
+        Assert.Equal("user@example.com", clip.Text);
+        Assert.Equal(TimeSpan.Zero, sched.LastDelay); // 아무 예약도 안 함
+    }
+
+    [Fact]
     public void Copy_sets_text_and_schedules_clear_after_20_seconds()
     {
         var clip = new FakeClipboard();

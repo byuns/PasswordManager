@@ -2,11 +2,24 @@ using PasswordManager.Core.Models;
 using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
 using PasswordManager.ViewModels;
+using PasswordManager.ViewModels.Services;
 
 namespace PasswordManager.ViewModels.Tests;
 
 public class MainViewModelTests
 {
+    private sealed class FakeClipboard : IClipboardService
+    {
+        public string? Text { get; private set; }
+        public void SetText(string text) => Text = text;
+        public void Clear() => Text = null;
+    }
+
+    private sealed class NoopScheduler : IScheduler
+    {
+        public void Schedule(TimeSpan delay, Action action) { }
+    }
+
     private static readonly KdfParams Light = new(MemoryKiB: 8192, Iterations: 2, Parallelism: 1);
     private const string Master = "correct horse battery staple";
     private const string Path = "vault.dat";
@@ -102,7 +115,9 @@ public class MainViewModelTests
     [Fact]
     public void Edit_raises_EditRequested_with_selected_entry()
     {
-        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
+        var manager = UnlockedWith(("Steam", "gamer"));
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        var vm = new MainViewModel(manager);
         Assert.False(vm.EditCommand.CanExecute(null));
 
         vm.SelectedEntry = vm.Entries[0];
@@ -111,6 +126,32 @@ public class MainViewModelTests
         vm.EditCommand.Execute(null);
 
         Assert.Same(vm.SelectedEntry, requested);
+    }
+
+    [Fact]
+    public void Edit_without_otp_shows_hint_and_does_not_request()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
+        vm.SelectedEntry = vm.Entries[0];
+        VaultEntry? requested = null;
+        vm.EditRequested += (_, e) => requested = e;
+
+        vm.EditCommand.Execute(null);
+
+        Assert.Null(requested);
+        Assert.False(string.IsNullOrEmpty(vm.StatusMessage));
+    }
+
+    [Fact]
+    public void CopyLogin_copies_the_login_to_clipboard()
+    {
+        var clip = new FakeClipboard();
+        var copier = new ClipboardCopier(clip, new NoopScheduler());
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")), copier);
+
+        vm.CopyLoginCommand.Execute("gamer");
+
+        Assert.Equal("gamer", clip.Text);
     }
 
     [Fact]
@@ -191,7 +232,9 @@ public class MainViewModelTests
     [Fact]
     public void Edit_with_parameter_raises_EditRequested_with_that_entry()
     {
-        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")));
+        var manager = UnlockedWith(("Steam", "gamer"), ("GitHub", "dev"));
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        var vm = new MainViewModel(manager);
         var target = vm.Entries.First(e => e.Title == "GitHub");
         VaultEntry? requested = null;
         vm.EditRequested += (_, e) => requested = e;

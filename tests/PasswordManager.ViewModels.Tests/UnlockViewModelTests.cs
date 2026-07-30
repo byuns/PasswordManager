@@ -68,6 +68,48 @@ public class UnlockViewModelTests
         Assert.False(string.IsNullOrEmpty(vm.ErrorMessage));
     }
 
+    private sealed class MemoryLockoutStore : ILockoutStore
+    {
+        private LockoutState _state = LockoutState.Empty;
+        public LockoutState Load() => _state;
+        public void Save(LockoutState state) => _state = state;
+    }
+
+    [Fact]
+    public async Task Fifth_wrong_password_locks_out_and_blocks_further_attempts()
+    {
+        var manager = ManagerWithExistingVault();
+        var throttle = new LoginThrottle(new MemoryLockoutStore()); // 실제 시각
+        var vm = new UnlockViewModel(manager, throttle) { Password = "wrong-password" };
+
+        for (var i = 0; i < 5; i++)
+            await vm.UnlockCommand.ExecuteAsync(null);
+        Assert.Contains("잠깁니다", vm.ErrorMessage); // 5회째 잠금 안내
+
+        // 잠긴 동안에는 올바른 비번을 넣어도 열지 않고 남은 시간을 안내한다
+        vm.Password = Master;
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.False(manager.IsUnlocked);
+        Assert.Contains("후 다시 시도", vm.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Successful_unlock_resets_failure_count()
+    {
+        var manager = ManagerWithExistingVault();
+        var store = new MemoryLockoutStore();
+        var throttle = new LoginThrottle(store);
+        var vm = new UnlockViewModel(manager, throttle) { Password = "wrong-password" };
+        await vm.UnlockCommand.ExecuteAsync(null); // 1회 실패 기록
+
+        vm.Password = Master;
+        await vm.UnlockCommand.ExecuteAsync(null); // 성공
+
+        Assert.True(manager.IsUnlocked);
+        Assert.Equal(LockoutState.Empty, store.Load());
+    }
+
     [Fact]
     public void ForgotPassword_raises_RecoveryRequested()
     {

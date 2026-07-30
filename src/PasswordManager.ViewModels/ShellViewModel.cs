@@ -38,11 +38,16 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly VaultManager _vault;
     private readonly KdfParams _kdf;
     private readonly ClipboardCopier? _clipboard;
+    private readonly LoginThrottle? _throttle;
     private readonly string? _appVersion;
     private readonly string? _vaultPath;
     private MainViewModel? _main;
     private SettingsViewModel? _settings;
     private InfoViewModel? _info;
+
+    /// <summary>이번 세션에 OTP 게이트를 통과한 항목 ID. 한 번 통과하면 그 항목의 보기·편집을
+    /// 코드 없이 연다(TD-004). 볼트가 잠기면 비운다.</summary>
+    private readonly HashSet<string> _otpVerified = new();
 
     [ObservableProperty]
     private ShellState _state;
@@ -64,11 +69,12 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSidebarVisible));
 
     public ShellViewModel(VaultManager vault, KdfParams? kdf = null, ClipboardCopier? clipboard = null,
-        string? appVersion = null, string? vaultPath = null)
+        string? appVersion = null, string? vaultPath = null, LoginThrottle? throttle = null)
     {
         _vault = vault;
         _kdf = kdf ?? KdfParams.Recommended;
         _clipboard = clipboard;
+        _throttle = throttle;
         _appVersion = appVersion;
         _vaultPath = vaultPath;
 
@@ -80,7 +86,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void StartUnlock()
     {
-        var vm = new UnlockViewModel(_vault);
+        var vm = new UnlockViewModel(_vault, _throttle);
         vm.Unlocked += OnVaultOpened;
         vm.RecoveryRequested += OnRecoveryRequested;
         CurrentViewModel = vm;
@@ -134,7 +140,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_main is null)
         {
-            _main = new MainViewModel(_vault);
+            _main = new MainViewModel(_vault, _clipboard);
             _main.Locked += OnLocked;
             _main.AddRequested += OnAddRequested;
             _main.EditRequested += OnEditRequested;
@@ -197,6 +203,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnLocked(object? sender, EventArgs e)
     {
+        _otpVerified.Clear(); // 잠기면 그레이스 해제 — 다음 열람·편집은 다시 OTP를 요구
         if (_main is not null)
         {
             _main.Locked -= OnLocked;
@@ -219,8 +226,34 @@ public sealed partial class ShellViewModel : ObservableObject
     private void OnAddRequested(object? sender, EventArgs e) =>
         ShowEditor(new EntryEditViewModel(_vault));
 
-    private void OnEditRequested(object? sender, VaultEntry entry) =>
-        ShowEditor(new EntryEditViewModel(_vault, entry));
+    private void OnEditRequested(object? sender, VaultEntry entry)
+    {
+        // 편집도 기존 비번을 노출하므로 게이트를 거친다(TD-004). 이번 세션에 이미 통과한 항목은 바로 연다.
+        if (_otpVerified.Contains(entry.Id))
+        {
+            ShowEditor(new EntryEditViewModel(_vault, entry));
+            return;
+        }
+
+        var gate = new OtpGateViewModel(_vault, entry, copier: _clipboard, purpose: OtpGatePurpose.Edit);
+        void OnVerified(object? s, EventArgs e)
+        {
+            gate.Verified -= OnVerified;
+            gate.Cancelled -= OnCancelled;
+            _otpVerified.Add(entry.Id);
+            ShowEditor(new EntryEditViewModel(_vault, entry));
+        }
+        void OnCancelled(object? s, EventArgs e)
+        {
+            gate.Verified -= OnVerified;
+            gate.Cancelled -= OnCancelled;
+            ShowMain();
+        }
+        gate.Verified += OnVerified;
+        gate.Cancelled += OnCancelled;
+        CurrentViewModel = gate;
+        Section = null;
+    }
 
     private void ShowEditor(EntryEditViewModel editor)
     {
@@ -319,16 +352,20 @@ public sealed partial class ShellViewModel : ObservableObject
     private void OnRevealRequested(object? sender, VaultEntry entry)
     {
         // 검증 성공 시 게이트 화면이 그 자리에서 비밀번호를 보여주고, 닫기(취소)로 메인에 복귀한다.
-        var vm = new OtpGateViewModel(_vault, entry, copier: _clipboard);
-        vm.Cancelled += OnGateClosed;
-        CurrentViewModel = vm;
+        // 이번 세션에 이미 통과한 항목은 코드 없이 즉시 노출한다(그레이스).
+        bool granted = _otpVerified.Contains(entry.Id);
+        var gate = new OtpGateViewModel(_vault, entry, copier: _clipboard,
+            purpose: OtpGatePurpose.Reveal, preVerified: granted);
+        void OnRevealed(object? s, EventArgs e) => _otpVerified.Add(entry.Id);
+        void OnClosed(object? s, EventArgs e)
+        {
+            gate.Revealed -= OnRevealed;
+            gate.Cancelled -= OnClosed;
+            ShowMain();
+        }
+        gate.Revealed += OnRevealed;
+        gate.Cancelled += OnClosed;
+        CurrentViewModel = gate;
         Section = null;
-    }
-
-    private void OnGateClosed(object? sender, EventArgs e)
-    {
-        if (sender is OtpGateViewModel vm)
-            vm.Cancelled -= OnGateClosed;
-        ShowMain();
     }
 }

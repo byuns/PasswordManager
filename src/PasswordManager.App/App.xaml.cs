@@ -44,8 +44,9 @@ public partial class App : Application
 
         var manager = new VaultManager(new FileVaultStore(), vaultPath);
         var clipboard = new ClipboardCopier(new WpfClipboardService(), new DispatcherScheduler());
+        var throttle = new LoginThrottle(FileLockoutStore.ForVault(vaultPath));
         var shell = new ShellViewModel(manager, clipboard: clipboard,
-            appVersion: GetAppVersion(), vaultPath: vaultPath);
+            appVersion: GetAppVersion(), vaultPath: vaultPath, throttle: throttle);
 
         new ShellWindow { DataContext = shell }.Show();
     }

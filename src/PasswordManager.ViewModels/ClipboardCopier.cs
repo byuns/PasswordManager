@@ -31,4 +31,14 @@ public sealed class ClipboardCopier
         _clipboard.SetText(text);
         _scheduler.Schedule(ClearDelay, _clipboard.Clear);
     }
+
+    /// <summary>
+    /// text를 클립보드에 복사만 한다(자동 삭제 예약 없음). 비밀이 아닌 값(예: 아이디)을 옮길 때 쓴다.
+    /// 비번용 자동 삭제 예약과 뒤섞여 방금 복사한 비번을 이르게 지우는 일을 피하려 분리했다. 빈 값은 무시.
+    /// </summary>
+    public void Copy(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        _clipboard.SetText(text);
+    }
 }

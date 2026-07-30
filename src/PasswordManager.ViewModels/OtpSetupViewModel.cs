@@ -8,7 +8,7 @@ namespace PasswordManager.ViewModels;
 /// <summary>
 /// 앱 잠금해제 OTP 등록(재설정) 마법사 ViewModel (design 5.4, TD-004·TD-005).
 /// secret을 메모리에서 생성해 <see cref="Secret"/>·<see cref="OtpAuthUri"/>로 노출하고,
-/// 사용자가 폰 Authenticator에 등록한 뒤 6자리 코드를 입력하면 검증한다. 검증에 성공한
+/// 사용자가 디바이스 Authenticator에 등록한 뒤 6자리 코드를 입력하면 검증한다. 검증에 성공한
 /// 경우에만 secret을 볼트에 저장한다(persist-on-confirm — 취소 시 아무것도 바뀌지 않음).
 /// QR 이미지는 UI 폴리싱 단계에서 <see cref="OtpAuthUri"/>로 생성한다(TD-020).
 /// </summary>
@@ -28,10 +28,10 @@ public sealed partial class OtpSetupViewModel : ObservableObject
         OtpAuthUri = OtpAuth.BuildUri(Secret, Issuer, Account);
     }
 
-    /// <summary>폰에 수동 입력할 secret(Base32). 확인 전에는 저장되지 않는다.</summary>
+    /// <summary>디바이스에 수동 입력할 secret(Base32). 확인 전에는 저장되지 않는다.</summary>
     public string Secret { get; }
 
-    /// <summary>폰 Authenticator 등록용 otpauth URI(추후 QR 이미지의 원본).</summary>
+    /// <summary>디바이스 Authenticator 등록용 otpauth URI(추후 QR 이미지의 원본).</summary>
     public string OtpAuthUri { get; }
 
     [ObservableProperty]
@@ -55,7 +55,7 @@ public sealed partial class OtpSetupViewModel : ObservableObject
         ErrorMessage = null;
         if (!TotpValidator.Verify(Secret, VerificationCode, _now()))
         {
-            ErrorMessage = "코드가 올바르지 않습니다. 폰의 6자리 코드를 다시 확인하세요.";
+            ErrorMessage = "코드가 올바르지 않습니다. 디바이스의 6자리 코드를 다시 확인하세요.";
             return;
         }
 

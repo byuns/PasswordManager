@@ -153,6 +153,45 @@ public class OtpGateViewModelTests
     }
 
     [Fact]
+    public void Edit_purpose_valid_code_raises_Verified_without_revealing()
+    {
+        var manager = new VaultManager(new InMemoryStore(), Path);
+        manager.CreateNew(Master, Light);
+        var secret = TotpValidator.GenerateSecret();
+        manager.SetOtpSecret(secret);
+        var entry = new VaultEntry { Title = "Steam", Password = "s3cr3t" };
+        manager.Add(entry);
+        var vm = new OtpGateViewModel(manager, entry, () => FixedNow, purpose: OtpGatePurpose.Edit);
+        var verified = false;
+        var revealed = false;
+        vm.Verified += (_, _) => verified = true;
+        vm.Revealed += (_, _) => revealed = true;
+
+        vm.VerificationCode = TotpValidator.GenerateCode(secret, FixedNow);
+        vm.RevealCommand.Execute(null);
+
+        Assert.True(verified);
+        Assert.False(revealed);
+        Assert.Null(vm.RevealedPassword); // 편집 용도는 비번을 노출하지 않는다
+        Assert.Equal("확인", vm.ActionLabel);
+    }
+
+    [Fact]
+    public void PreVerified_reveal_shows_password_immediately_without_code()
+    {
+        var manager = new VaultManager(new InMemoryStore(), Path);
+        manager.CreateNew(Master, Light);
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        var entry = new VaultEntry { Title = "Steam", Password = "s3cr3t" };
+        manager.Add(entry);
+
+        var vm = new OtpGateViewModel(manager, entry, () => FixedNow, preVerified: true);
+
+        Assert.False(vm.RequiresCode);            // 코드 입력란 숨김
+        Assert.Equal("s3cr3t", vm.RevealedPassword); // 즉시 노출
+    }
+
+    [Fact]
     public void Cancel_raises_Cancelled_without_revealing()
     {
         var (vm, _, _) = NewVm();

@@ -13,10 +13,12 @@ namespace PasswordManager.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly VaultManager _vault;
+    private readonly ClipboardCopier? _copier;
 
-    public MainViewModel(VaultManager vault)
+    public MainViewModel(VaultManager vault, ClipboardCopier? copier = null)
     {
         _vault = vault;
+        _copier = copier;
         Refresh();
     }
 
@@ -42,7 +44,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>새 항목 추가 요청. 셸이 편집 화면을 연다.</summary>
     public event EventHandler? AddRequested;
 
-    /// <summary>선택 항목 편집 요청. 셸이 편집 화면을 연다.</summary>
+    /// <summary>선택 항목 편집 요청(OTP 등록 시에만 발생). 셸이 OTP 게이트→편집 화면을 연다.</summary>
     public event EventHandler<VaultEntry>? EditRequested;
 
     /// <summary>선택 항목 비밀번호 열람 요청. 셸이 OTP 게이트를 연다(design 7.4).</summary>
@@ -85,11 +87,24 @@ public sealed partial class MainViewModel : ObservableObject
     private void Edit(VaultEntry? entry)
     {
         var target = entry ?? SelectedEntry;
-        if (target is not null) EditRequested?.Invoke(this, target);
+        if (target is null) return;
+        StatusMessage = null;
+        if (!_vault.HasOtp)
+        {
+            // 편집은 기존 비밀번호를 노출하므로 열람과 동일하게 OTP 게이트를 거친다(TD-004).
+            // 미등록이면 먼저 등록을 안내한다.
+            StatusMessage = "비밀번호를 편집하려면 먼저 OTP를 등록하세요.";
+            return;
+        }
+        EditRequested?.Invoke(this, target);
     }
 
     [RelayCommand]
     private void NewEntry() => AddRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>아이디를 클립보드에 복사한다(비밀 아님 → OTP 게이트 없이 바로). design 7.4.</summary>
+    [RelayCommand]
+    private void CopyLogin(string? login) => _copier?.Copy(login);
 
     [RelayCommand(CanExecute = nameof(CanActOn))]
     private void Reveal(VaultEntry? entry)

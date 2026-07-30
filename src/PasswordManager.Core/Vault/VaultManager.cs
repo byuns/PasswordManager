@@ -106,7 +106,7 @@ public sealed class VaultManager
 
     /// <summary>
     /// 앱 잠금해제 OTP secret을 등록(또는 재설정)한다. 등록 화면이 메모리에서 secret을 만들어
-    /// 폰 등록을 확인한 뒤 넘겨주면 본문에 저장한다(persist-on-confirm, TD-005 재설정 포함).
+    /// 디바이스 등록을 확인한 뒤 넘겨주면 본문에 저장한다(persist-on-confirm, TD-005 재설정 포함).
     /// secret 생성은 <see cref="TotpValidator.GenerateSecret"/>가 담당한다.
     /// </summary>
     public void SetOtpSecret(string secret)

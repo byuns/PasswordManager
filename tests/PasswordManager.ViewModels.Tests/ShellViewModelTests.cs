@@ -1,3 +1,4 @@
+using PasswordManager.Core.Models;
 using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
 using PasswordManager.ViewModels;
@@ -139,20 +140,85 @@ public class ShellViewModelTests
     }
 
     [Fact]
-    public async Task Edit_request_opens_prefilled_editor()
+    public async Task Edit_request_gates_on_otp_then_opens_prefilled_editor()
     {
-        var (shell, main) = await OpenedShellAsync();
-        main.NewEntryCommand.Execute(null);
-        var adder = Assert.IsType<EntryEditViewModel>(shell.CurrentViewModel);
-        adder.Title = "Steam";
-        adder.SaveCommand.Execute(null);
+        var (shell, main, secret) = await OpenedShellWithOtpSecretAsync();
+        AddAndSelectEntry(shell, main, "Steam");
 
-        main.SelectedEntry = main.Entries[0];
         main.EditCommand.Execute(null);
+
+        // 편집도 게이트를 거친다 → OTP 확인 화면
+        var gate = Assert.IsType<OtpGateViewModel>(shell.CurrentViewModel);
+        Assert.Equal(OtpGatePurpose.Edit, gate.Purpose);
+        gate.VerificationCode = TotpValidator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        gate.RevealCommand.Execute(null);
 
         var editor = Assert.IsType<EntryEditViewModel>(shell.CurrentViewModel);
         Assert.False(editor.IsNew);
         Assert.Equal("Steam", editor.Title);
+    }
+
+    [Fact]
+    public async Task Cancel_edit_gate_returns_to_main()
+    {
+        var (shell, main, _) = await OpenedShellWithOtpSecretAsync();
+        AddAndSelectEntry(shell, main, "Steam");
+
+        main.EditCommand.Execute(null);
+        var gate = Assert.IsType<OtpGateViewModel>(shell.CurrentViewModel);
+        gate.CancelCommand.Execute(null);
+
+        Assert.Same(main, shell.CurrentViewModel);
+    }
+
+    [Fact]
+    public async Task Passing_otp_once_grants_both_view_and_edit_until_lock()
+    {
+        var (shell, main, secret) = await OpenedShellWithOtpSecretAsync();
+        var entry = AddAndSelectEntry(shell, main, "Steam");
+
+        // 1) 보기로 OTP 통과
+        main.RevealCommand.Execute(null);
+        var gate = Assert.IsType<OtpGateViewModel>(shell.CurrentViewModel);
+        gate.VerificationCode = TotpValidator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        gate.RevealCommand.Execute(null);
+        Assert.Equal(entry.Password, gate.RevealedPassword);
+        gate.CancelCommand.Execute(null); // 메인 복귀
+
+        // 2) 같은 항목 편집 → 코드 없이 바로 편집 화면
+        main.EditCommand.Execute(null);
+        Assert.IsType<EntryEditViewModel>(shell.CurrentViewModel);
+
+        // 3) 다시 보기 → 코드 입력 없이 즉시 노출
+        shell.ShowItemsCommand.Execute(null);
+        main.SelectedEntry = main.Entries[0];
+        main.RevealCommand.Execute(null);
+        var graceGate = Assert.IsType<OtpGateViewModel>(shell.CurrentViewModel);
+        Assert.False(graceGate.RequiresCode);
+        Assert.Equal(entry.Password, graceGate.RevealedPassword);
+    }
+
+    [Fact]
+    public async Task Grace_is_cleared_after_lock()
+    {
+        var (shell, main, secret) = await OpenedShellWithOtpSecretAsync();
+        AddAndSelectEntry(shell, main, "Steam");
+        main.EditCommand.Execute(null);
+        var gate = Assert.IsType<OtpGateViewModel>(shell.CurrentViewModel);
+        gate.VerificationCode = TotpValidator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        gate.RevealCommand.Execute(null);
+        Assert.IsType<EntryEditViewModel>(shell.CurrentViewModel); // 편집 진입(통과 기록됨)
+
+        shell.LockCommand.Execute(null); // 잠금 → 그레이스 해제
+
+        // 다시 언락 후 편집하면 게이트가 또 뜬다
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.Password = Master;
+        await unlock.UnlockCommand.ExecuteAsync(null);
+        var main2 = Assert.IsType<MainViewModel>(shell.CurrentViewModel);
+        main2.SelectedEntry = main2.Entries[0];
+        main2.EditCommand.Execute(null);
+        Assert.IsType<OtpGateViewModel>(shell.CurrentViewModel);
     }
 
     [Fact]
@@ -282,14 +348,34 @@ public class ShellViewModelTests
     /// <summary>셸을 열고 설정에서 OTP 등록 마법사로 OTP를 등록한 뒤 항목 화면으로 복귀한다.</summary>
     private static async Task<(ShellViewModel shell, MainViewModel main)> OpenedShellWithOtpAsync()
     {
+        var (shell, main, _) = await OpenedShellWithOtpSecretAsync();
+        return (shell, main);
+    }
+
+    /// <summary>OTP 등록까지 마친 셸과 함께 등록된 secret을 돌려준다(게이트 코드 생성용).</summary>
+    private static async Task<(ShellViewModel shell, MainViewModel main, string secret)> OpenedShellWithOtpSecretAsync()
+    {
         var (shell, main) = await OpenedShellAsync();
         var settings = GoToSettings(shell);
         settings.SetupOtpCommand.Execute(null);
         var wizard = Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel);
-        wizard.VerificationCode = TotpValidator.GenerateCode(wizard.Secret, DateTimeOffset.UtcNow);
+        var secret = wizard.Secret;
+        wizard.VerificationCode = TotpValidator.GenerateCode(secret, DateTimeOffset.UtcNow);
         wizard.ConfirmCommand.Execute(null);
         shell.ShowItemsCommand.Execute(null); // 열람 게이트 테스트를 위해 항목으로 복귀
-        return (shell, main);
+        return (shell, main, secret);
+    }
+
+    /// <summary>메인에 항목 하나를 추가하고 선택 상태로 만든다.</summary>
+    private static VaultEntry AddAndSelectEntry(ShellViewModel shell, MainViewModel main, string title)
+    {
+        main.NewEntryCommand.Execute(null);
+        var editor = Assert.IsType<EntryEditViewModel>(shell.CurrentViewModel);
+        editor.Title = title;
+        editor.Password = "s3cr3t";
+        editor.SaveCommand.Execute(null);
+        main.SelectedEntry = main.Entries[0];
+        return main.Entries[0];
     }
 
     [Fact]

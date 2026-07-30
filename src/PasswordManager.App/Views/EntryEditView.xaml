@@ -13,7 +13,7 @@
                 <ui:TextBlock FontTypography="Title" Margin="0,0,0,24"
                               Text="{Binding IsNew, Converter={StaticResource BoolToTitle}}" />
 
-            <ui:TextBlock Text="제목" Margin="0,0,0,4" />
+            <ui:TextBlock Text="사이트명" Margin="0,0,0,4" />
             <ui:TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
 
             <ui:TextBlock Text="주소(URL)" Margin="0,12,0,4" />
@@ -29,7 +29,9 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <PasswordBox x:Name="PasswordInput" Grid.Column="0"
-                             PasswordChanged="PasswordInput_PasswordChanged" />
+                             PasswordChanged="PasswordInput_PasswordChanged"
+                             GotKeyboardFocus="PasswordInput_GotKeyboardFocus"
+                             LostKeyboardFocus="PasswordInput_LostKeyboardFocus" />
                 <ui:Button Grid.Column="1" Content="생성" Icon="{ui:SymbolIcon Password24}"
                            Margin="8,0,0,0" Command="{Binding GeneratePasswordCommand}" />
             </Grid>
