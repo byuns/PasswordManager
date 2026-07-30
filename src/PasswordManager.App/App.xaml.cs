@@ -1,10 +1,12 @@
 using System.IO;
 using System.Threading;
 using System.Windows;
+using System.Windows.Media;
 using PasswordManager.App.Services;
 using PasswordManager.Core.Vault;
 using PasswordManager.Storage;
 using PasswordManager.ViewModels;
+using Wpf.Ui.Appearance;
 
 namespace PasswordManager.App;
 
@@ -29,6 +31,10 @@ public partial class App : Application
         }
 
         base.OnStartup(e);
+
+        // 강조색을 인디고(#6366F1)로 오버라이드한다(TD-023). Dark 기준으로 파생색을 자동 계산한다.
+        ApplicationAccentColorManager.Apply(
+            (Color)ColorConverter.ConvertFromString("#6366F1"), ApplicationTheme.Dark);
 
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var directory = Path.Combine(appData, "PasswordManager");
