@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace PasswordManager.App.Views;
 
@@ -9,4 +10,11 @@ namespace PasswordManager.App.Views;
 public partial class MainView : UserControl
 {
     public MainView() => InitializeComponent();
+
+    /// <summary>태그 칩 바는 스크롤바를 숨기므로, 마우스 휠 세로 스크롤을 가로 이동으로 바꿔 슬라이딩한다.</summary>
+    private void TagScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        TagScroll.ScrollToHorizontalOffset(TagScroll.HorizontalOffset - e.Delta);
+        e.Handled = true;
+    }
 }

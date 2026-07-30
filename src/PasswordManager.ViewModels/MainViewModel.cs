@@ -29,13 +29,19 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly VaultManager _vault;
     private readonly ClipboardCopier? _copier;
+    private readonly ISet<string> _otpVerified;
 
-    public MainViewModel(VaultManager vault, ClipboardCopier? copier = null)
+    public MainViewModel(VaultManager vault, ClipboardCopier? copier = null, ISet<string>? otpVerified = null)
     {
         _vault = vault;
         _copier = copier;
+        _otpVerified = otpVerified ?? new HashSet<string>();
         Refresh();
     }
+
+    /// <summary>이번 세션에 OTP 게이트를 통과한 항목 ID들(셸과 공유). 메모 hover 미리보기를
+    /// 이 집합에 든 항목에만 노출한다(열람·편집과 동일한 게이트, design 7.4).</summary>
+    public IEnumerable<string> OtpVerifiedIds => _otpVerified;
 
     /// <summary>현재 화면에 보이는(검색 필터가 적용된) 항목들(평면).</summary>
     public ObservableCollection<VaultEntry> Entries { get; } = new();

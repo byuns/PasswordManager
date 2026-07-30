@@ -60,9 +60,11 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <!-- 태그가 많아도 세로 공간을 잡아먹지 않도록 한 줄 고정 + 가로 스크롤(TD-030) -->
-            <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Disabled">
+            <!-- 태그가 많아도 세로 공간을 잡아먹지 않도록 한 줄 고정(TD-030). 스크롤바는 디자인을 해쳐
+                 숨기고, 마우스 휠로 가로 슬라이딩한다(코드비하인드 TagScroll_PreviewMouseWheel). -->
+            <ScrollViewer x:Name="TagScroll" Grid.Column="0"
+                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                          PreviewMouseWheel="TagScroll_PreviewMouseWheel">
                 <ItemsControl ItemsSource="{Binding AvailableTags}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -132,23 +134,37 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <!-- 아이디(+복사) + 태그 -->
-                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <ui:TextBlock Text="{Binding Login}" VerticalAlignment="Center"
-                                                                      TextTrimming="CharacterEllipsis"
-                                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                        <ui:Button Padding="4" Margin="6,0,0,0" VerticalAlignment="Center"
-                                                                   Icon="{ui:SymbolIcon Copy16}" FontSize="11" ToolTip="아이디 복사"
-                                                                   Visibility="{Binding Login, Converter={StaticResource StringNotEmptyToVisibility}}"
-                                                                   Command="{Binding DataContext.CopyLoginCommand,
-                                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                   CommandParameter="{Binding Login}" />
-                                                    </StackPanel>
+                                                <!-- 아이디(+복사) -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <ui:TextBlock Text="{Binding Login}" VerticalAlignment="Center"
+                                                                  TextTrimming="CharacterEllipsis"
+                                                                  ToolTipService.InitialShowDelay="300"
+                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                        <!-- 메모 미리보기: OTP 통과 항목에만 hover로 짧게 노출 -->
+                                                        <ToolTipService.ToolTip>
+                                                            <MultiBinding Converter="{StaticResource EntryNotesTooltip}">
+                                                                <Binding />
+                                                                <Binding Path="DataContext.OtpVerifiedIds"
+                                                                         RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                            </MultiBinding>
+                                                        </ToolTipService.ToolTip>
+                                                    </ui:TextBlock>
+                                                    <ui:Button Padding="4" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                               Icon="{ui:SymbolIcon Copy16}" FontSize="11" ToolTip="아이디 복사"
+                                                               Visibility="{Binding Login, Converter={StaticResource StringNotEmptyToVisibility}}"
+                                                               Command="{Binding DataContext.CopyLoginCommand,
+                                                                         RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                               CommandParameter="{Binding Login}" />
+                                                </StackPanel>
 
+                                                <!-- 태그 + 액션 (태그는 버튼 왼쪽 인라인. 변경일은 목록에서 생략, OTP 열람 시 표시) -->
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                            VerticalAlignment="Center" HorizontalAlignment="Right">
                                                     <!-- 태그 칩 (최대 2개) -->
-                                                    <ItemsControl Margin="0,4,0,0"
-                                                                  ItemsSource="{Binding Tags, Converter={StaticResource LimitTags}, ConverterParameter=2}">
+                                                    <ItemsControl VerticalAlignment="Center" Margin="0,0,8,0">
+                                                        <ItemsControl.ItemsSource>
+                                                            <Binding Path="Tags" Converter="{StaticResource LimitTags}" ConverterParameter="2" />
+                                                        </ItemsControl.ItemsSource>
                                                         <ItemsControl.ItemsPanel>
                                                             <ItemsPanelTemplate>
                                                                 <StackPanel Orientation="Horizontal" />
@@ -157,21 +173,14 @@
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                                                        CornerRadius="4" Padding="6,1" Margin="0,0,4,0">
+                                                                        CornerRadius="4" Padding="6,1" Margin="4,0,0,0">
                                                                     <ui:TextBlock FontTypography="Caption" Text="{Binding}"
                                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                                                 </Border>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
-                                                </StackPanel>
-
-                                                <!-- 마지막 변경일 + 액션 -->
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                                    <ui:TextBlock FontTypography="Caption" HorizontalAlignment="Right"
-                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                                  Text="{Binding LastChangedAt, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                    <StackPanel Orientation="Horizontal">
                                                         <ui:Button Icon="{ui:SymbolIcon Eye24}" ToolTip="보기"
                                                                    Command="{Binding DataContext.RevealCommand,
                                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"

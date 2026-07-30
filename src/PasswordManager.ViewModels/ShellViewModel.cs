@@ -140,7 +140,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_main is null)
         {
-            _main = new MainViewModel(_vault, _clipboard);
+            _main = new MainViewModel(_vault, _clipboard, _otpVerified);
             _main.Locked += OnLocked;
             _main.AddRequested += OnAddRequested;
             _main.EditRequested += OnEditRequested;
