@@ -1,0 +1,17 @@
+<UserControl x:Class="PasswordManager.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:PasswordManager.ViewModels;assembly=PasswordManager.ViewModels"
+             d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <StackPanel Margin="24">
+        <ui:TextBlock FontTypography="Title" Text="설정" Margin="0,0,0,16" />
+        <ui:TextBlock FontTypography="Body"
+                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                      Text="OTP·마스터 변경·자동잠금/클립보드 시간·백업/복원 설정이 이곳에 모입니다. (준비 중)"
+                      TextWrapping="Wrap" />
+    </StackPanel>
+</UserControl>

@@ -7,10 +7,18 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-    <Grid MaxWidth="420" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+    <Border MaxWidth="560" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}" Padding="40">
         <StackPanel>
-            <ui:TextBlock FontTypography="Title" Text="비밀번호 복구" Margin="0,0,0,8" />
-            <ui:TextBlock TextWrapping="Wrap" Margin="0,0,0,16"
+            <ui:SymbolIcon Symbol="Key24" FontSize="48" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                           Margin="0,0,0,12" />
+            <ui:TextBlock FontTypography="Title" Text="비밀번호 복구" HorizontalAlignment="Center"
+                          Margin="0,0,0,8" />
+            <ui:TextBlock TextWrapping="Wrap" Margin="0,0,0,20" TextAlignment="Center"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                           Text="보관해 둔 복구 키를 입력하고 새 마스터 비밀번호를 설정하세요." />
 
             <ui:TextBlock Text="복구 키" Margin="0,0,0,4" />
@@ -18,23 +26,25 @@
                         PlaceholderText="XXXX-XXXX-…" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56" />
 
             <ui:TextBlock Text="새 마스터 비밀번호" Margin="0,12,0,4" />
-            <PasswordBox x:Name="NewPasswordInput" PasswordChanged="NewPasswordInput_PasswordChanged" />
+            <ui:PasswordBox x:Name="NewPasswordInput" PlaceholderText="새 비밀번호"
+                            PasswordChanged="NewPasswordInput_PasswordChanged" />
 
             <ui:TextBlock Text="새 비밀번호 확인" Margin="0,12,0,4" />
-            <PasswordBox x:Name="ConfirmInput" PasswordChanged="ConfirmInput_PasswordChanged" />
+            <ui:PasswordBox x:Name="ConfirmInput" PlaceholderText="한 번 더 입력"
+                            PasswordChanged="ConfirmInput_PasswordChanged" />
 
             <ui:TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                           Text="{Binding ErrorMessage}"
                           Visibility="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToVisibility}}"
                           TextWrapping="Wrap" Margin="0,8,0,0" />
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                 <ui:Button Content="취소" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
-                <ui:Button Content="복구" Appearance="Primary" Command="{Binding RecoverCommand}"
+                <ui:Button Content="복구" Appearance="Primary" IsDefault="True" Command="{Binding RecoverCommand}"
                            IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
             </StackPanel>
             <ProgressBar IsIndeterminate="True" Margin="0,12,0,0"
                          Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
         </StackPanel>
-    </Grid>
+    </Border>
 </UserControl>

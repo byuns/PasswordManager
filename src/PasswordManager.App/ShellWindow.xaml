@@ -11,7 +11,47 @@
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True">
     <Grid>
-        <ui:TitleBar Title="PasswordManager" VerticalAlignment="Top" />
-        <ContentControl Margin="0,32,0,0" Content="{Binding CurrentViewModel}" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="PasswordManager" />
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 사이드바 레일 (열림 모드 · 최상위 페이지에서만 노출) -->
+            <Border Grid.Column="0" Width="150"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,1,0"
+                    Visibility="{Binding IsSidebarVisible, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel Margin="8">
+                    <ui:Button DockPanel.Dock="Bottom" Content="잠금"
+                               Icon="{ui:SymbolIcon LockClosed24}"
+                               HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                               Command="{Binding LockCommand}" Margin="0,4,0,0" />
+                    <StackPanel>
+                        <ui:Button Content="항목" Icon="{ui:SymbolIcon Key24}"
+                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                   Appearance="Transparent" Command="{Binding ShowItemsCommand}"
+                                   Margin="0,0,0,4" />
+                        <ui:Button Content="설정" Icon="{ui:SymbolIcon Settings24}"
+                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                   Appearance="Transparent" Command="{Binding ShowSettingsCommand}"
+                                   Margin="0,0,0,4" />
+                        <ui:Button Content="정보" Icon="{ui:SymbolIcon Info24}"
+                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                   Appearance="Transparent" Command="{Binding ShowInfoCommand}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" />
+        </Grid>
     </Grid>
 </ui:FluentWindow>

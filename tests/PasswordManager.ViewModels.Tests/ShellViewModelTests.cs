@@ -314,4 +314,83 @@ public class ShellViewModelTests
 
         Assert.Same(main, shell.CurrentViewModel);
     }
+
+    // --- 열림 모드 사이드바 네비게이션 (design-ux 2·3절, TD-023) ---
+
+    [Fact]
+    public async Task Open_selects_items_section_and_shows_sidebar()
+    {
+        var (shell, _) = await OpenedShellAsync();
+
+        Assert.Equal(ShellSection.Items, shell.Section);
+        Assert.True(shell.IsSidebarVisible);
+    }
+
+    [Fact]
+    public async Task Show_settings_navigates_to_settings_page()
+    {
+        var (shell, _) = await OpenedShellAsync();
+
+        shell.ShowSettingsCommand.Execute(null);
+
+        Assert.IsType<SettingsViewModel>(shell.CurrentViewModel);
+        Assert.Equal(ShellSection.Settings, shell.Section);
+        Assert.True(shell.IsSidebarVisible);
+    }
+
+    [Fact]
+    public async Task Show_info_navigates_to_info_page()
+    {
+        var (shell, _) = await OpenedShellAsync();
+
+        shell.ShowInfoCommand.Execute(null);
+
+        Assert.IsType<InfoViewModel>(shell.CurrentViewModel);
+        Assert.Equal(ShellSection.Info, shell.Section);
+    }
+
+    [Fact]
+    public async Task Show_items_returns_to_same_main()
+    {
+        var (shell, main) = await OpenedShellAsync();
+        shell.ShowSettingsCommand.Execute(null);
+
+        shell.ShowItemsCommand.Execute(null);
+
+        Assert.Same(main, shell.CurrentViewModel);
+        Assert.Equal(ShellSection.Items, shell.Section);
+    }
+
+    [Fact]
+    public void Locked_state_hides_sidebar()
+    {
+        var shell = new ShellViewModel(new VaultManager(new InMemoryStore(), Path), Light);
+
+        Assert.Null(shell.Section);
+        Assert.False(shell.IsSidebarVisible);
+    }
+
+    [Fact]
+    public async Task Subflow_hides_sidebar()
+    {
+        var (shell, main) = await OpenedShellAsync();
+
+        main.NewEntryCommand.Execute(null); // 편집(집중 작업) 진입 → 사이드바 숨김
+
+        Assert.IsType<EntryEditViewModel>(shell.CurrentViewModel);
+        Assert.Null(shell.Section);
+        Assert.False(shell.IsSidebarVisible);
+    }
+
+    [Fact]
+    public async Task Shell_lock_returns_to_unlock_flow()
+    {
+        var (shell, _) = await OpenedShellAsync();
+
+        shell.LockCommand.Execute(null);
+
+        Assert.Equal(ShellState.Unlocking, shell.State);
+        Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        Assert.False(shell.IsSidebarVisible);
+    }
 }

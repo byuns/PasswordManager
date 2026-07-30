@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using PasswordManager.Core.Models;
 using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
@@ -16,6 +17,17 @@ public enum ShellState
     Open,
 }
 
+/// <summary>열림 모드 사이드바가 가리키는 최상위 섹션(design-ux 3절).</summary>
+public enum ShellSection
+{
+    /// <summary>항목(카드 리스트).</summary>
+    Items,
+    /// <summary>설정.</summary>
+    Settings,
+    /// <summary>정보.</summary>
+    Info,
+}
+
 /// <summary>
 /// 앱의 최상위 셸 ViewModel. 최초 실행 여부(<see cref="VaultManager.Exists"/>)에 따라
 /// 생성/언락 화면을 띄우고, 성공하면 열림 상태로 전환한다. 활성 화면은
@@ -27,12 +39,27 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly KdfParams _kdf;
     private readonly ClipboardCopier? _clipboard;
     private MainViewModel? _main;
+    private SettingsViewModel? _settings;
+    private InfoViewModel? _info;
 
     [ObservableProperty]
     private ShellState _state;
 
     [ObservableProperty]
     private ObservableObject? _currentViewModel;
+
+    /// <summary>
+    /// 열림 모드에서 사이드바가 가리키는 섹션. 잠금 상태·하위 흐름(편집·게이트 등
+    /// 집중 작업)에서는 <c>null</c>이며, 이때 사이드바를 숨긴다.
+    /// </summary>
+    [ObservableProperty]
+    private ShellSection? _section;
+
+    /// <summary>열림 모드의 최상위 페이지를 보여줄 때만 사이드바를 노출한다.</summary>
+    public bool IsSidebarVisible => Section is not null;
+
+    partial void OnSectionChanged(ShellSection? value) =>
+        OnPropertyChanged(nameof(IsSidebarVisible));
 
     public ShellViewModel(VaultManager vault, KdfParams? kdf = null, ClipboardCopier? clipboard = null)
     {
@@ -52,6 +79,7 @@ public sealed partial class ShellViewModel : ObservableObject
         vm.Unlocked += OnVaultOpened;
         vm.RecoveryRequested += OnRecoveryRequested;
         CurrentViewModel = vm;
+        Section = null;
         State = ShellState.Unlocking;
     }
 
@@ -61,6 +89,7 @@ public sealed partial class ShellViewModel : ObservableObject
         vm.Recovered += OnVaultOpened;
         vm.Cancelled += OnRecoveryCancelled;
         CurrentViewModel = vm;
+        Section = null;
         State = ShellState.Unlocking;
     }
 
@@ -71,6 +100,7 @@ public sealed partial class ShellViewModel : ObservableObject
         var vm = new CreateVaultViewModel(_vault, _kdf);
         vm.Completed += OnVaultOpened;
         CurrentViewModel = vm;
+        Section = null;
         State = ShellState.Creating;
     }
 
@@ -98,7 +128,36 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.Refresh();
         }
         CurrentViewModel = _main;
+        Section = ShellSection.Items;
     }
+
+    // --- 사이드바 네비게이션 (열림 모드, design-ux 3절) ---
+
+    /// <summary>항목(메인) 섹션으로 이동한다.</summary>
+    [RelayCommand]
+    private void ShowItems() => ShowMain();
+
+    /// <summary>설정 섹션으로 이동한다.</summary>
+    [RelayCommand]
+    private void ShowSettings()
+    {
+        _settings ??= new SettingsViewModel();
+        CurrentViewModel = _settings;
+        Section = ShellSection.Settings;
+    }
+
+    /// <summary>정보 섹션으로 이동한다.</summary>
+    [RelayCommand]
+    private void ShowInfo()
+    {
+        _info ??= new InfoViewModel();
+        CurrentViewModel = _info;
+        Section = ShellSection.Info;
+    }
+
+    /// <summary>사이드바 잠금 버튼. 열려 있을 때만 볼트를 잠그고 언락 화면으로 돌아간다.</summary>
+    [RelayCommand]
+    private void Lock() => AutoLock();
 
     /// <summary>유휴 자동 잠금(design 5.5). 열려 있을 때만 볼트를 잠그고 언락 화면으로 돌아간다.</summary>
     public void AutoLock()
@@ -134,6 +193,7 @@ public sealed partial class ShellViewModel : ObservableObject
         editor.Saved += OnEditorFinished;
         editor.Cancelled += OnEditorFinished;
         CurrentViewModel = editor;
+        Section = null;
     }
 
     private void OnChangeMasterRequested(object? sender, EventArgs e)
@@ -142,6 +202,7 @@ public sealed partial class ShellViewModel : ObservableObject
         vm.Changed += OnChangeMasterFinished;
         vm.Cancelled += OnChangeMasterFinished;
         CurrentViewModel = vm;
+        Section = null;
     }
 
     private void OnChangeMasterFinished(object? sender, EventArgs e)
@@ -170,6 +231,7 @@ public sealed partial class ShellViewModel : ObservableObject
         vm.Completed += OnOtpSetupFinished;
         vm.Cancelled += OnOtpSetupFinished;
         CurrentViewModel = vm;
+        Section = null;
     }
 
     private void OnOtpSetupFinished(object? sender, EventArgs e)
@@ -188,6 +250,7 @@ public sealed partial class ShellViewModel : ObservableObject
         var vm = new OtpGateViewModel(_vault, entry, copier: _clipboard);
         vm.Cancelled += OnGateClosed;
         CurrentViewModel = vm;
+        Section = null;
     }
 
     private void OnGateClosed(object? sender, EventArgs e)
