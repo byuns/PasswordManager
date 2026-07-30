@@ -71,31 +71,73 @@ public class EntryEditViewModelTests
     }
 
     [Fact]
-    public void Save_parses_comma_separated_tags_trimming_and_deduping()
+    public void AddTag_creates_chips_stripping_hash_and_deduping()
     {
-        var manager = Unlocked();
-        var vm = new EntryEditViewModel(manager)
-        {
-            Title = "GitHub",
-            TagsText = " work , dev ,work,  ",
-        };
+        var vm = new EntryEditViewModel(Unlocked()) { Title = "GitHub" };
 
-        vm.SaveCommand.Execute(null);
+        vm.TagInput = "#work"; vm.AddTagCommand.Execute(null);
+        vm.TagInput = "dev";   vm.AddTagCommand.Execute(null);
+        vm.TagInput = "WORK";  vm.AddTagCommand.Execute(null); // 대소문자 무시 중복 → 무시
 
-        var e = Assert.Single(manager.Entries);
-        Assert.Equal(new[] { "work", "dev" }, e.Tags);
+        Assert.Equal(new[] { "work", "dev" }, vm.Tags);
+        Assert.Equal(string.Empty, vm.TagInput);
     }
 
     [Fact]
-    public void Editing_prefills_tags_text_from_existing()
+    public void AddTag_splits_multiple_tokens_at_once()
+    {
+        var vm = new EntryEditViewModel(Unlocked()) { Title = "GitHub" };
+
+        vm.TagInput = "#work dev, 개인"; vm.AddTagCommand.Execute(null);
+
+        Assert.Equal(new[] { "work", "dev", "개인" }, vm.Tags);
+    }
+
+    [Fact]
+    public void Save_persists_tag_chips()
+    {
+        var manager = Unlocked();
+        var vm = new EntryEditViewModel(manager) { Title = "GitHub" };
+        vm.TagInput = "work"; vm.AddTagCommand.Execute(null);
+        vm.TagInput = "dev";  vm.AddTagCommand.Execute(null);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(new[] { "work", "dev" }, Assert.Single(manager.Entries).Tags);
+    }
+
+    [Fact]
+    public void Save_commits_pending_tag_input()
+    {
+        var manager = Unlocked();
+        var vm = new EntryEditViewModel(manager) { Title = "GitHub", TagInput = "#solo" };
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(new[] { "solo" }, Assert.Single(manager.Entries).Tags);
+    }
+
+    [Fact]
+    public void RemoveTag_removes_chip()
+    {
+        var vm = new EntryEditViewModel(Unlocked()) { Title = "GitHub" };
+        vm.TagInput = "work"; vm.AddTagCommand.Execute(null);
+        vm.TagInput = "dev";  vm.AddTagCommand.Execute(null);
+
+        vm.RemoveTagCommand.Execute("work");
+
+        Assert.Equal(new[] { "dev" }, vm.Tags);
+    }
+
+    [Fact]
+    public void Editing_prefills_tag_chips_from_existing()
     {
         var manager = Unlocked();
         manager.Add(new VaultEntry { Title = "GitHub", Password = "pw", Tags = { "work", "dev" } });
-        var existing = manager.Entries[0];
 
-        var vm = new EntryEditViewModel(manager, existing);
+        var vm = new EntryEditViewModel(manager, manager.Entries[0]);
 
-        Assert.Equal("work, dev", vm.TagsText);
+        Assert.Equal(new[] { "work", "dev" }, vm.Tags);
     }
 
     [Fact]

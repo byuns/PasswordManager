@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using PasswordManager.ViewModels;
 
 namespace PasswordManager.App.Views;
@@ -34,8 +35,17 @@ public partial class EntryEditView : UserControl
         if (!string.IsNullOrEmpty(vm.Password))
             ShowPlaceholder();
         vm.PropertyChanged += OnViewModelPropertyChanged;
-        Unloaded += (_, _) => vm.PropertyChanged -= OnViewModelPropertyChanged;
+        vm.Saved += OnSaved;
+        Unloaded += (_, _) =>
+        {
+            vm.PropertyChanged -= OnViewModelPropertyChanged;
+            vm.Saved -= OnSaved;
+        };
     }
+
+    /// <summary>저장 완료 시 확인 팝업을 띄운다.</summary>
+    private void OnSaved(object? sender, System.EventArgs e) =>
+        MessageBox.Show("저장되었습니다.", "완료", MessageBoxButton.OK, MessageBoxImage.Information);
 
     private void ShowPlaceholder()
     {
@@ -87,5 +97,14 @@ public partial class EntryEditView : UserControl
         _userEdited = true;
         _showingPlaceholder = false;
         _vm.Password = PasswordInput.Password;
+    }
+
+    /// <summary>태그 입력창에서 Space/Enter를 누르면 현재 입력을 태그 칩으로 확정한다(인스타식).</summary>
+    private void TagInput_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Space or Key.Enter))
+            return;
+        (_vm ?? DataContext as EntryEditViewModel)?.AddTagCommand.Execute(null);
+        e.Handled = true;
     }
 }

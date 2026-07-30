@@ -55,8 +55,35 @@
             </Expander>
 
             <ui:TextBlock Text="태그" Margin="0,12,0,4" />
-            <ui:TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}"
-                        PlaceholderText="쉼표로 구분 (예: 업무, 개인)" />
+            <!-- 확정된 태그 칩(각 ✕로 삭제) -->
+            <ItemsControl ItemsSource="{Binding Tags}" Margin="0,0,0,6"
+                          Visibility="{Binding Tags.Count, Converter={StaticResource CountToVisibility}}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                CornerRadius="12" Padding="10,3" Margin="0,0,6,6">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:TextBlock FontTypography="Caption" VerticalAlignment="Center"
+                                              Text="{Binding StringFormat='#{0}'}" />
+                                <ui:Button Appearance="Transparent" Content="✕" FontSize="10" Padding="4,0"
+                                           MinWidth="0" Margin="4,0,-4,0" VerticalAlignment="Center" ToolTip="태그 삭제"
+                                           Command="{Binding DataContext.RemoveTagCommand,
+                                                     RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- 태그 입력: # 붙여 입력하고 Space 또는 Enter로 칩 추가 -->
+            <ui:TextBox Text="{Binding TagInput, UpdateSourceTrigger=PropertyChanged}"
+                        PlaceholderText="#태그 입력 후 Space 또는 Enter"
+                        PreviewKeyDown="TagInput_PreviewKeyDown" />
 
             <ui:TextBlock Text="메모" Margin="0,12,0,4" />
             <ui:TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"

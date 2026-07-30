@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PasswordManager.Core.Models;
@@ -28,7 +29,8 @@ public sealed partial class EntryEditViewModel : ObservableObject
             Login = existing.Login;
             Password = existing.Password;
             Notes = existing.Notes;
-            TagsText = string.Join(", ", existing.Tags);
+            foreach (var tag in existing.Tags)
+                Tags.Add(tag);
         }
     }
 
@@ -44,8 +46,11 @@ public sealed partial class EntryEditViewModel : ObservableObject
     [ObservableProperty] private string _password = string.Empty;
     [ObservableProperty] private string _notes = string.Empty;
 
-    /// <summary>태그 입력(쉼표로 구분). 저장 시 <see cref="ParseTags"/>로 리스트로 변환한다.</summary>
-    [ObservableProperty] private string _tagsText = string.Empty;
+    /// <summary>확정된 태그 칩들(입력창에서 Space/Enter로 추가). 인스타/블로그식 태그 입력.</summary>
+    public ObservableCollection<string> Tags { get; } = new();
+
+    /// <summary>태그 입력창의 현재 텍스트. Space/Enter 시 <see cref="AddTag"/>가 칩으로 옮긴다.</summary>
+    [ObservableProperty] private string _tagInput = string.Empty;
 
     /// <summary>저장 완료 시 발생. 셸이 구독해 메인으로 돌아간다.</summary>
     public event EventHandler? Saved;
@@ -58,6 +63,9 @@ public sealed partial class EntryEditViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanSave))]
     private void Save()
     {
+        // 입력창에 아직 확정 안 한 태그가 남아 있으면 저장 시 함께 반영한다.
+        if (!string.IsNullOrWhiteSpace(TagInput)) AddTag();
+
         if (_original is null)
         {
             _vault.Add(new VaultEntry
@@ -67,7 +75,7 @@ public sealed partial class EntryEditViewModel : ObservableObject
                 Login = Login,
                 Password = Password,
                 Notes = Notes,
-                Tags = ParseTags(TagsText),
+                Tags = Tags.ToList(),
             });
         }
         else
@@ -83,18 +91,35 @@ public sealed partial class EntryEditViewModel : ObservableObject
                 Login = Login,
                 Password = Password,
                 Notes = Notes,
-                Tags = ParseTags(TagsText),
+                Tags = Tags.ToList(),
                 TotpSecret = _original.TotpSecret,
             });
         }
         Saved?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>쉼표로 구분한 태그 문자열을 트림·빈값 제거·중복 제거(대소문자 무시)해 리스트로 만든다.</summary>
-    private static List<string> ParseTags(string text) =>
-        text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+    /// <summary>입력창의 현재 텍스트를 태그 칩으로 옮긴다. '#'·공백·쉼표로 나눠 여러 개를 한 번에 처리하고,
+    /// 트림·중복 제거(대소문자 무시) 후 추가한 뒤 입력창을 비운다.</summary>
+    [RelayCommand]
+    private void AddTag()
+    {
+        var tokens = TagInput.Split(
+            new[] { ' ', ',', '#', '\t', '\n', '\r' },
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var tag in tokens)
+            if (!Tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)))
+                Tags.Add(tag);
+        TagInput = string.Empty;
+    }
+
+    /// <summary>태그 칩을 제거한다(칩의 ✕ 버튼).</summary>
+    [RelayCommand]
+    private void RemoveTag(string? tag)
+    {
+        if (tag is null) return;
+        var existing = Tags.FirstOrDefault(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null) Tags.Remove(existing);
+    }
 
     [RelayCommand]
     private void Cancel() => Cancelled?.Invoke(this, EventArgs.Empty);
