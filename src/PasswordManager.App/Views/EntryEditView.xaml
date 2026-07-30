@@ -7,10 +7,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" Loaded="OnLoaded">
-    <Grid MaxWidth="480" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
-        <StackPanel>
-            <ui:TextBlock FontTypography="Title" Margin="0,0,0,16"
-                          Text="{Binding IsNew, Converter={StaticResource BoolToTitle}}" />
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
+        <Grid MaxWidth="620" MinWidth="360" HorizontalAlignment="Stretch" Margin="40,32">
+            <StackPanel>
+                <ui:TextBlock FontTypography="Title" Margin="0,0,0,24"
+                              Text="{Binding IsNew, Converter={StaticResource BoolToTitle}}" />
 
             <ui:TextBlock Text="제목" Margin="0,0,0,4" />
             <ui:TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
@@ -55,10 +56,11 @@
             <ui:TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                <ui:Button Content="취소" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
-                <ui:Button Content="저장" Appearance="Primary" Command="{Binding SaveCommand}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                    <ui:Button Content="취소" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
+                    <ui:Button Content="저장" Appearance="Primary" Command="{Binding SaveCommand}" />
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

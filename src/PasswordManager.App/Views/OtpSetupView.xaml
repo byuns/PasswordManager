@@ -7,6 +7,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="FormScroll">
+    <Grid MinHeight="{Binding ViewportHeight, ElementName=FormScroll}">
     <Grid MaxWidth="480" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
         <StackPanel>
             <ui:TextBlock FontTypography="Title" Text="OTP 등록" Margin="0,0,0,8" />
@@ -42,4 +44,6 @@
             </StackPanel>
         </StackPanel>
     </Grid>
+    </Grid>
+    </ScrollViewer>
 </UserControl>
