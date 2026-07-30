@@ -39,6 +39,33 @@
                 <ui:Button Content="변경" Command="{Binding ChangeMasterPasswordCommand}" />
             </ui:CardControl>
 
+            <ui:CardControl Icon="{ui:SymbolIcon Timer24}" Margin="0,0,0,8">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="자동 잠금 · 클립보드" />
+                        <ui:TextBlock FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="유휴 자동 잠금(분)과 비밀번호 복사 후 클립보드 삭제(초) 시간." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Margin="0,0,12,0">
+                        <ui:TextBlock FontTypography="Caption" Text="잠금(분)" Margin="0,0,0,2" />
+                        <ui:NumberBox Width="96" Minimum="1" Maximum="120" SmallChange="1"
+                                      ClearButtonEnabled="False"
+                                      Value="{Binding AutoLockMinutes, Mode=TwoWay}" />
+                    </StackPanel>
+                    <StackPanel Margin="0,0,12,0">
+                        <ui:TextBlock FontTypography="Caption" Text="클립보드(초)" Margin="0,0,0,2" />
+                        <ui:NumberBox Width="96" Minimum="5" Maximum="300" SmallChange="5"
+                                      ClearButtonEnabled="False"
+                                      Value="{Binding ClipboardClearSeconds, Mode=TwoWay}" />
+                    </StackPanel>
+                    <ui:Button Content="저장" VerticalAlignment="Bottom"
+                               Command="{Binding SaveTimeSettingsCommand}" />
+                </StackPanel>
+            </ui:CardControl>
+
             <!-- 데이터 -->
             <ui:TextBlock FontTypography="BodyStrong" Text="데이터"
                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="2,16,0,8" />

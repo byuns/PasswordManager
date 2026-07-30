@@ -8,8 +8,8 @@ public sealed class AutoLockController
 {
     private DateTimeOffset _lastActivity;
 
-    /// <summary>유휴 허용 시간. 이 시간 동안 활동이 없으면 잠근다.</summary>
-    public TimeSpan Timeout { get; }
+    /// <summary>유휴 허용 시간. 이 시간 동안 활동이 없으면 잠근다. 설정에서 변경할 수 있다(design 5.5·7.9).</summary>
+    public TimeSpan Timeout { get; set; }
 
     public AutoLockController(TimeSpan timeout) => Timeout = timeout;
 

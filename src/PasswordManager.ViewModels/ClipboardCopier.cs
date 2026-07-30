@@ -14,8 +14,8 @@ public sealed class ClipboardCopier
     private readonly IClipboardService _clipboard;
     private readonly IScheduler _scheduler;
 
-    /// <summary>복사 후 자동 삭제까지의 대기 시간.</summary>
-    public TimeSpan ClearDelay { get; }
+    /// <summary>복사 후 자동 삭제까지의 대기 시간. 설정에서 변경할 수 있다(design 5.5·7.9).</summary>
+    public TimeSpan ClearDelay { get; set; }
 
     public ClipboardCopier(IClipboardService clipboard, IScheduler scheduler, TimeSpan? clearDelay = null)
     {

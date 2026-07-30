@@ -30,7 +30,9 @@ public partial class ShellWindow : FluentWindow
         _poll = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
         _poll.Tick += (_, _) =>
         {
-            if (_autoLock.ShouldLock(DateTimeOffset.UtcNow) && DataContext is ShellViewModel shell)
+            if (DataContext is not ShellViewModel shell) return;
+            _autoLock.Timeout = shell.AutoLockTimeout; // 볼트 설정값을 매 폴링마다 반영
+            if (_autoLock.ShouldLock(DateTimeOffset.UtcNow))
                 shell.AutoLock();
         };
         _poll.Start();

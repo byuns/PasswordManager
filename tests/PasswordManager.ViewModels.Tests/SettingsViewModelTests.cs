@@ -128,6 +128,35 @@ public class SettingsViewModelTests
     }
 
     [Fact]
+    public void Loads_time_settings_from_vault()
+    {
+        var m = Unlocked();
+        m.SetTimeSettings(7, 25);
+
+        var vm = new SettingsViewModel(m);
+
+        Assert.Equal(7, vm.AutoLockMinutes);
+        Assert.Equal(25, vm.ClipboardClearSeconds);
+    }
+
+    [Fact]
+    public void SaveTimeSettings_persists_clamps_and_raises_changed()
+    {
+        var m = Unlocked();
+        var vm = new SettingsViewModel(m) { AutoLockMinutes = 0, ClipboardClearSeconds = 9999 };
+        var changed = false;
+        vm.TimeSettingsChanged += (_, _) => changed = true;
+
+        vm.SaveTimeSettingsCommand.Execute(null);
+
+        Assert.True(changed);
+        Assert.Equal(1, vm.AutoLockMinutes);        // 하한 클램프
+        Assert.Equal(300, vm.ClipboardClearSeconds); // 상한 클램프
+        Assert.Equal(1, m.AutoLockMinutes);
+        Assert.Equal(300, m.ClipboardClearSeconds);
+    }
+
+    [Fact]
     public void IsOtpRegistered_reflects_vault_state_after_refresh()
     {
         var manager = Unlocked();

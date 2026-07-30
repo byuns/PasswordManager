@@ -11,6 +11,12 @@ public sealed class VaultData
 
     /// <summary>앱 잠금해제 2FA용 TOTP secret(RFC4648 Base32). 미등록이면 null. design 5.4·TD-004.</summary>
     public string? AppTotpSecret { get; set; }
+
+    /// <summary>유휴 자동 잠금까지의 분(design 5.5). 기본 5분. 구버전 볼트엔 없으므로 기본값이 유지된다.</summary>
+    public int AutoLockMinutes { get; set; } = 5;
+
+    /// <summary>비밀번호 복사 후 클립보드 자동 삭제까지의 초(design 5.5). 기본 20초.</summary>
+    public int ClipboardClearSeconds { get; set; } = 20;
 }
 
 /// <summary>계정 항목 하나. 같은 사이트의 여러 계정은 각각 독립 Entry. design 6.</summary>

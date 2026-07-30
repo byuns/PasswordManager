@@ -67,6 +67,43 @@ public class CsvVaultTests
     }
 
     [Fact]
+    public void Time_settings_default_to_5min_and_20sec()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+
+        Assert.Equal(5, m.AutoLockMinutes);
+        Assert.Equal(20, m.ClipboardClearSeconds);
+    }
+
+    [Fact]
+    public void SetTimeSettings_persists_across_reopen()
+    {
+        var store = new InMemoryStore();
+        var m1 = new VaultManager(store, Path);
+        m1.CreateNew(Master, Light);
+
+        m1.SetTimeSettings(autoLockMinutes: 10, clipboardClearSeconds: 30);
+
+        var m2 = new VaultManager(store, Path);
+        m2.Open(Master);
+        Assert.Equal(10, m2.AutoLockMinutes);
+        Assert.Equal(30, m2.ClipboardClearSeconds);
+    }
+
+    [Fact]
+    public void SetTimeSettings_rejects_non_positive_values()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => m.SetTimeSettings(0, 20));
+        Assert.Throws<ArgumentOutOfRangeException>(() => m.SetTimeSettings(5, 0));
+    }
+
+    [Fact]
     public void VaultManager_export_then_import_appends_entries_with_new_ids()
     {
         var store = new InMemoryStore();

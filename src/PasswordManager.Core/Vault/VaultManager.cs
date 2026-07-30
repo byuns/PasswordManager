@@ -212,6 +212,26 @@ public sealed class VaultManager
         Lock();
     }
 
+    /// <summary>유휴 자동 잠금까지의 분(design 5.5).</summary>
+    public int AutoLockMinutes => RequireUnlocked().AutoLockMinutes;
+
+    /// <summary>비밀번호 복사 후 클립보드 자동 삭제까지의 초(design 5.5).</summary>
+    public int ClipboardClearSeconds => RequireUnlocked().ClipboardClearSeconds;
+
+    /// <summary>자동 잠금·클립보드 삭제 시간을 저장한다(양수만 허용). design 5.5·7.9.</summary>
+    public void SetTimeSettings(int autoLockMinutes, int clipboardClearSeconds)
+    {
+        if (autoLockMinutes < 1)
+            throw new ArgumentOutOfRangeException(nameof(autoLockMinutes), "자동 잠금 시간은 1분 이상이어야 합니다.");
+        if (clipboardClearSeconds < 1)
+            throw new ArgumentOutOfRangeException(nameof(clipboardClearSeconds), "클립보드 삭제 시간은 1초 이상이어야 합니다.");
+
+        var data = RequireUnlocked();
+        data.AutoLockMinutes = autoLockMinutes;
+        data.ClipboardClearSeconds = clipboardClearSeconds;
+        Persist();
+    }
+
     /// <summary>현재 항목들을 자체 CSV(평문)로 내보낸다. 호출부가 강한 경고를 거쳐야 한다(design 7.7).</summary>
     public string ExportCsv() => CsvVault.Export(RequireUnlocked().Entries);
 

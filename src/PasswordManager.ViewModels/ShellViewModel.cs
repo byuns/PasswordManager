@@ -100,6 +100,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnRecoveryCancelled(object? sender, EventArgs e) => StartUnlock();
 
+    private void OnTimeSettingsChanged(object? sender, EventArgs e) => ApplyClipboardDelay();
+
     private void StartCreate()
     {
         var vm = new CreateVaultViewModel(_vault, _kdf);
@@ -111,8 +113,20 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnVaultOpened(object? sender, EventArgs e)
     {
+        ApplyClipboardDelay();
         ShowMain();
         State = ShellState.Open;
+    }
+
+    /// <summary>유휴 자동 잠금까지의 시간(볼트 설정 기반). 잠금 상태에선 기본 5분. ShellWindow 폴링이 읽는다.</summary>
+    public TimeSpan AutoLockTimeout =>
+        _vault.IsUnlocked ? TimeSpan.FromMinutes(_vault.AutoLockMinutes) : TimeSpan.FromMinutes(5);
+
+    /// <summary>볼트에 저장된 클립보드 삭제 시간을 실행 중인 ClipboardCopier에 반영한다(design 5.5·7.9).</summary>
+    private void ApplyClipboardDelay()
+    {
+        if (_clipboard is not null && _vault.IsUnlocked)
+            _clipboard.ClearDelay = TimeSpan.FromSeconds(_vault.ClipboardClearSeconds);
     }
 
     /// <summary>메인 화면을 띄운다. 최초 1회 MainViewModel을 만들고, 재진입 시엔 목록만 갱신한다.</summary>
@@ -150,6 +164,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _settings.OtpSetupRequested += OnOtpSetupRequested;
             _settings.ChangeMasterRequested += OnChangeMasterRequested;
             _settings.Locked += OnLocked; // 복원 시 세션이 닫히면 언락 화면으로
+            _settings.TimeSettingsChanged += OnTimeSettingsChanged;
         }
         else
         {
@@ -195,6 +210,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _settings.OtpSetupRequested -= OnOtpSetupRequested;
             _settings.ChangeMasterRequested -= OnChangeMasterRequested;
             _settings.Locked -= OnLocked;
+            _settings.TimeSettingsChanged -= OnTimeSettingsChanged;
             _settings = null;
         }
         StartUnlock();

@@ -13,11 +13,27 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly VaultManager _vault;
 
-    public SettingsViewModel(VaultManager vault) => _vault = vault;
+    public SettingsViewModel(VaultManager vault)
+    {
+        _vault = vault;
+        _autoLockMinutes = vault.AutoLockMinutes;
+        _clipboardClearSeconds = vault.ClipboardClearSeconds;
+    }
 
     /// <summary>사용자에게 보여줄 일시 안내(예: 백업 완료).</summary>
     [ObservableProperty]
     private string? _statusMessage;
+
+    /// <summary>유휴 자동 잠금까지의 분(design 5.5·7.9).</summary>
+    [ObservableProperty]
+    private int _autoLockMinutes;
+
+    /// <summary>비밀번호 복사 후 클립보드 자동 삭제까지의 초(design 5.5·7.9).</summary>
+    [ObservableProperty]
+    private int _clipboardClearSeconds;
+
+    /// <summary>시간 설정을 저장했을 때 발생. 셸이 구독해 실행 중인 자동잠금·클립보드에 즉시 반영한다.</summary>
+    public event EventHandler? TimeSettingsChanged;
 
     /// <summary>앱 잠금해제 OTP가 등록되어 있는가(상태 표시·재설정 안내용).</summary>
     public bool IsOtpRegistered => _vault.HasOtp;
@@ -70,6 +86,17 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private void Import() => ImportRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>시간 설정을 허용 범위로 보정해 저장하고, 실행 중인 컴포넌트에 반영하도록 알린다.</summary>
+    [RelayCommand]
+    private void SaveTimeSettings()
+    {
+        AutoLockMinutes = Math.Clamp(AutoLockMinutes, 1, 120);       // 1분 ~ 2시간
+        ClipboardClearSeconds = Math.Clamp(ClipboardClearSeconds, 5, 300); // 5초 ~ 5분
+        _vault.SetTimeSettings(AutoLockMinutes, ClipboardClearSeconds);
+        StatusMessage = "시간 설정을 저장했습니다.";
+        TimeSettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>현재 항목을 CSV(평문)로 만들어 돌려준다. 뷰가 경고 후 파일에 쓴다(design 7.7).</summary>
     public string BuildExportCsv() => _vault.ExportCsv();
