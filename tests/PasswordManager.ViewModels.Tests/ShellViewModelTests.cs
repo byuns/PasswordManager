@@ -318,6 +318,38 @@ public class ShellViewModelTests
     }
 
     [Fact]
+    public async Task Otp_resetup_when_registered_requires_master_confirm()
+    {
+        var (shell, _) = await OpenedShellWithOtpAsync(); // OTP 등록됨 + 항목 화면
+        var settings = GoToSettings(shell);
+
+        settings.SetupOtpCommand.Execute(null);
+
+        var confirm = Assert.IsType<MasterConfirmViewModel>(shell.CurrentViewModel);
+        confirm.Password = "wrong";
+        confirm.ConfirmCommand.Execute(null);
+        Assert.IsType<MasterConfirmViewModel>(shell.CurrentViewModel); // 여전히 확인 화면
+        Assert.False(string.IsNullOrEmpty(confirm.ErrorMessage));
+
+        confirm.Password = Master;
+        confirm.ConfirmCommand.Execute(null);
+        Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel); // 통과 → 재설정 마법사
+    }
+
+    [Fact]
+    public async Task Cancel_master_confirm_returns_to_settings()
+    {
+        var (shell, _) = await OpenedShellWithOtpAsync();
+        var settings = GoToSettings(shell);
+        settings.SetupOtpCommand.Execute(null);
+        var confirm = Assert.IsType<MasterConfirmViewModel>(shell.CurrentViewModel);
+
+        confirm.CancelCommand.Execute(null);
+
+        Assert.Same(settings, shell.CurrentViewModel);
+    }
+
+    [Fact]
     public async Task Cancel_otp_setup_returns_to_settings()
     {
         var (shell, _) = await OpenedShellAsync();

@@ -261,6 +261,44 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnOtpSetupRequested(object? sender, EventArgs e)
     {
+        // 재설정(이미 등록됨)은 마스터 비번 재확인을 거친다(TD-005). 최초 등록은 방금 언락했으므로 바로 진행.
+        if (_vault.HasOtp)
+        {
+            var confirm = new MasterConfirmViewModel(_vault, "OTP를 재설정하려면 마스터 비밀번호를 확인하세요.");
+            confirm.Confirmed += OnOtpResetConfirmed;
+            confirm.Cancelled += OnOtpResetCancelled;
+            CurrentViewModel = confirm;
+            Section = null;
+        }
+        else
+        {
+            OpenOtpSetup();
+        }
+    }
+
+    private void OnOtpResetConfirmed(object? sender, EventArgs e)
+    {
+        DetachMasterConfirm(sender);
+        OpenOtpSetup();
+    }
+
+    private void OnOtpResetCancelled(object? sender, EventArgs e)
+    {
+        DetachMasterConfirm(sender);
+        ShowSettings();
+    }
+
+    private void DetachMasterConfirm(object? sender)
+    {
+        if (sender is MasterConfirmViewModel vm)
+        {
+            vm.Confirmed -= OnOtpResetConfirmed;
+            vm.Cancelled -= OnOtpResetCancelled;
+        }
+    }
+
+    private void OpenOtpSetup()
+    {
         var vm = new OtpSetupViewModel(_vault);
         vm.Completed += OnOtpSetupFinished;
         vm.Cancelled += OnOtpSetupFinished;

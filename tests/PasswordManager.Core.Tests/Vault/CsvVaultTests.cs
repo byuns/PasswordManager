@@ -67,6 +67,17 @@ public class CsvVaultTests
     }
 
     [Fact]
+    public void VerifyMasterPassword_true_for_correct_false_for_wrong()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path);
+        m.CreateNew(Master, Light);
+
+        Assert.True(m.VerifyMasterPassword(Master));
+        Assert.False(m.VerifyMasterPassword("wrong-password"));
+    }
+
+    [Fact]
     public void Time_settings_default_to_5min_and_20sec()
     {
         var store = new InMemoryStore();

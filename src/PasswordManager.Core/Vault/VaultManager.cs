@@ -119,6 +119,24 @@ public sealed class VaultManager
         Persist();
     }
 
+    /// <summary>
+    /// 현재 마스터 비밀번호가 맞는지 상태 변경 없이 확인한다(민감 작업 재확인용, TD-005).
+    /// 세션·DEK를 바꾸지 않으며, 틀리면 false를 돌려준다.
+    /// </summary>
+    public bool VerifyMasterPassword(string masterPassword)
+    {
+        var vault = _current ?? _store.Load(_path);
+        try
+        {
+            VaultService.Unlock(vault, masterPassword);
+            return true;
+        }
+        catch (InvalidMasterPasswordException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>입력한 OTP 코드를 검증한다(현재 시각 기준). 미등록이면 예외를 던진다.</summary>
     public bool VerifyOtp(string code) => VerifyOtp(code, DateTimeOffset.UtcNow);
 

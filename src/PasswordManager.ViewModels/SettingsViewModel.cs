@@ -41,6 +41,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>OTP 등록 상태를 사람이 읽는 문자열로(설정 카드 표시용).</summary>
     public string OtpStatusText => IsOtpRegistered ? "등록됨" : "미등록";
 
+    /// <summary>OTP 액션 버튼 문구. 미등록이면 "등록", 등록됨이면 "재설정"(마스터 재확인 동반).</summary>
+    public string OtpActionLabel => IsOtpRegistered ? "재설정" : "등록";
+
     /// <summary>OTP 등록(재설정) 요청. 셸이 등록 마법사를 연다.</summary>
     public event EventHandler? OtpSetupRequested;
 
@@ -67,6 +70,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsOtpRegistered));
         OnPropertyChanged(nameof(OtpStatusText));
+        OnPropertyChanged(nameof(OtpActionLabel));
     }
 
     [RelayCommand]

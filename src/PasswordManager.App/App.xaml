@@ -35,6 +35,9 @@
             <DataTemplate DataType="{x:Type vm:ChangeMasterPasswordViewModel}">
                 <views:ChangeMasterPasswordView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:MasterConfirmViewModel}">
+                <views:MasterConfirmView />
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:MainViewModel}">
                 <views:MainView />
             </DataTemplate>
