@@ -82,18 +82,28 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsOtpRegistered));
     }
 
-    private bool HasSelection() => SelectedEntry is not null;
+    /// <summary>
+    /// 카드 액션 대상. 카드 버튼은 자기 항목을 인자로 넘기고(<paramref name="entry"/>),
+    /// 인자가 없으면(예: 하단 공용 버튼) 선택 항목으로 폴백한다. design-ux §4.
+    /// </summary>
+    private bool CanActOn(VaultEntry? entry) => (entry ?? SelectedEntry) is not null;
 
-    [RelayCommand(CanExecute = nameof(HasSelection))]
-    private void Delete()
+    [RelayCommand(CanExecute = nameof(CanActOn))]
+    private void Delete(VaultEntry? entry)
     {
-        _vault.Remove(SelectedEntry!.Id);
-        SelectedEntry = null;
+        var target = entry ?? SelectedEntry;
+        if (target is null) return;
+        _vault.Remove(target.Id);
+        if (ReferenceEquals(target, SelectedEntry)) SelectedEntry = null;
         Refresh();
     }
 
-    [RelayCommand(CanExecute = nameof(HasSelection))]
-    private void Edit() => EditRequested?.Invoke(this, SelectedEntry!);
+    [RelayCommand(CanExecute = nameof(CanActOn))]
+    private void Edit(VaultEntry? entry)
+    {
+        var target = entry ?? SelectedEntry;
+        if (target is not null) EditRequested?.Invoke(this, target);
+    }
 
     [RelayCommand]
     private void NewEntry() => AddRequested?.Invoke(this, EventArgs.Empty);
@@ -104,9 +114,11 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SetupOtp() => OtpSetupRequested?.Invoke(this, EventArgs.Empty);
 
-    [RelayCommand(CanExecute = nameof(HasSelection))]
-    private void Reveal()
+    [RelayCommand(CanExecute = nameof(CanActOn))]
+    private void Reveal(VaultEntry? entry)
     {
+        var target = entry ?? SelectedEntry;
+        if (target is null) return;
         StatusMessage = null;
         if (!_vault.HasOtp)
         {
@@ -114,7 +126,7 @@ public sealed partial class MainViewModel : ObservableObject
             StatusMessage = "비밀번호를 보려면 먼저 OTP를 등록하세요.";
             return;
         }
-        RevealRequested?.Invoke(this, SelectedEntry!);
+        RevealRequested?.Invoke(this, target);
     }
 
     [RelayCommand]

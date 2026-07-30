@@ -239,4 +239,54 @@ public class MainViewModelTests
 
         Assert.Same(vm.SelectedEntry, requested);
     }
+
+    // --- 카드 내 액션(항목을 인자로 직접 전달, design-ux §4) ---
+
+    [Fact]
+    public void Delete_with_parameter_removes_that_entry_regardless_of_selection()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")));
+        var target = vm.Entries.First(e => e.Title == "Steam");
+
+        vm.DeleteCommand.Execute(target);
+
+        Assert.Single(vm.Entries);
+        Assert.Equal("GitHub", vm.Entries[0].Title);
+    }
+
+    [Fact]
+    public void Delete_with_parameter_enabled_without_selection()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
+
+        Assert.True(vm.DeleteCommand.CanExecute(vm.Entries[0]));
+    }
+
+    [Fact]
+    public void Edit_with_parameter_raises_EditRequested_with_that_entry()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")));
+        var target = vm.Entries.First(e => e.Title == "GitHub");
+        VaultEntry? requested = null;
+        vm.EditRequested += (_, e) => requested = e;
+
+        vm.EditCommand.Execute(target);
+
+        Assert.Same(target, requested);
+    }
+
+    [Fact]
+    public void Reveal_with_parameter_and_otp_raises_with_that_entry()
+    {
+        var manager = UnlockedWith(("Steam", "gamer"), ("GitHub", "dev"));
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        var vm = new MainViewModel(manager);
+        var target = vm.Entries.First(e => e.Title == "GitHub");
+        VaultEntry? requested = null;
+        vm.RevealRequested += (_, e) => requested = e;
+
+        vm.RevealCommand.Execute(target);
+
+        Assert.Same(target, requested);
+    }
 }

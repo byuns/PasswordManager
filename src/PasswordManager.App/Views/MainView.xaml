@@ -7,67 +7,94 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-    <DockPanel Margin="16">
-        <!-- 상단 도구모음 -->
-        <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+    <DockPanel Margin="{StaticResource ThicknessL}">
+        <!-- 상단 도구모음: 검색 + 새 항목 (보조 동작은 4단계에서 설정으로 이전) -->
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ui:TextBox Grid.Column="0" PlaceholderText="검색 (제목·아이디)"
+                        Icon="{ui:SymbolIcon Search24}"
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
             <ui:Button Grid.Column="1" Content="새 항목" Icon="{ui:SymbolIcon Add24}"
                        Appearance="Primary" Margin="8,0,0,0" Command="{Binding NewEntryCommand}" />
-            <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon ShieldKeyhole24}"
-                       ToolTip="OTP 등록/재설정 (2단계 인증)"
-                       Margin="8,0,0,0" Command="{Binding SetupOtpCommand}" />
-            <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Key24}" ToolTip="마스터 비밀번호 변경"
-                       Margin="8,0,0,0" Command="{Binding ChangeMasterPasswordCommand}" />
-            <ui:Button Grid.Column="4" Icon="{ui:SymbolIcon Save24}" ToolTip="볼트 백업"
-                       Margin="8,0,0,0" Command="{Binding BackupCommand}" />
-            <ui:Button Grid.Column="5" Icon="{ui:SymbolIcon ArrowImport24}" ToolTip="볼트 복원(백업에서)"
-                       Margin="8,0,0,0" Command="{Binding RestoreCommand}" />
-            <ui:Button Grid.Column="6" Content="잠금" Icon="{ui:SymbolIcon LockClosed24}"
-                       Margin="8,0,0,0" Command="{Binding LockCommand}" />
-        </Grid>
-
-        <!-- 하단 동작 버튼 -->
-        <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ui:TextBlock Grid.Column="0" VerticalAlignment="Center"
-                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                          Text="{Binding StatusMessage}" TextWrapping="Wrap"
-                          Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <ui:Button Content="보기" Icon="{ui:SymbolIcon Eye24}"
-                           Command="{Binding RevealCommand}" Margin="0,0,8,0" />
-                <ui:Button Content="편집" Icon="{ui:SymbolIcon Edit24}"
-                           Command="{Binding EditCommand}" Margin="0,0,8,0" />
-                <ui:Button Content="삭제" Icon="{ui:SymbolIcon Delete24}"
-                           Appearance="Danger" Command="{Binding DeleteCommand}" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
+                <ui:Button Icon="{ui:SymbolIcon ShieldKeyhole24}"
+                           ToolTip="OTP 등록/재설정 (2단계 인증)" Command="{Binding SetupOtpCommand}" />
+                <ui:Button Icon="{ui:SymbolIcon Key24}" ToolTip="마스터 비밀번호 변경"
+                           Margin="4,0,0,0" Command="{Binding ChangeMasterPasswordCommand}" />
+                <ui:Button Icon="{ui:SymbolIcon Save24}" ToolTip="볼트 백업"
+                           Margin="4,0,0,0" Command="{Binding BackupCommand}" />
+                <ui:Button Icon="{ui:SymbolIcon ArrowImport24}" ToolTip="볼트 복원(백업에서)"
+                           Margin="4,0,0,0" Command="{Binding RestoreCommand}" />
             </StackPanel>
         </Grid>
 
-        <!-- 항목 목록 -->
-        <ListView ItemsSource="{Binding Entries}"
-                  SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="제목" Width="200" DisplayMemberBinding="{Binding Title}" />
-                    <GridViewColumn Header="아이디" Width="220" DisplayMemberBinding="{Binding Login}" />
-                    <GridViewColumn Header="주소" Width="260" DisplayMemberBinding="{Binding Url}" />
-                    <GridViewColumn Header="마지막 변경" Width="120"
-                                    DisplayMemberBinding="{Binding LastChangedAt, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                </GridView>
-            </ListView.View>
-        </ListView>
+        <!-- 상태 안내 (예: OTP 미등록 시 열람 안내) -->
+        <ui:TextBlock DockPanel.Dock="Bottom" Margin="0,12,0,0"
+                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                      Text="{Binding StatusMessage}" TextWrapping="Wrap"
+                      Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}" />
+
+        <!-- 항목 카드 리스트 (design-ux §4) -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+            <ItemsControl ItemsSource="{Binding Entries}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 사이트 이니셜 아바타 -->
+                                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20"
+                                        Background="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title, Converter={StaticResource Initial}}"
+                                               Foreground="White" FontSize="18" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+
+                                <!-- 제목 + 아이디 -->
+                                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="BodyStrong" Text="{Binding Title}"
+                                                  TextTrimming="CharacterEllipsis" />
+                                    <ui:TextBlock FontTypography="Caption" Text="{Binding Login}"
+                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                </StackPanel>
+
+                                <!-- 마지막 변경일 + 액션 -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <ui:TextBlock FontTypography="Caption" HorizontalAlignment="Right"
+                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  Text="{Binding LastChangedAt, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <ui:Button Icon="{ui:SymbolIcon Eye24}" ToolTip="보기"
+                                                   Command="{Binding DataContext.RevealCommand,
+                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}" />
+                                        <ui:Button Icon="{ui:SymbolIcon Edit24}" ToolTip="편집" Margin="4,0,0,0"
+                                                   Command="{Binding DataContext.EditCommand,
+                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}" />
+                                        <ui:Button Icon="{ui:SymbolIcon Delete24}" ToolTip="삭제" Margin="4,0,0,0"
+                                                   Appearance="Danger"
+                                                   Command="{Binding DataContext.DeleteCommand,
+                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </DockPanel>
 </UserControl>

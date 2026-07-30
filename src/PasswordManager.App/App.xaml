@@ -18,6 +18,7 @@
             <conv:CountToVisibilityConverter x:Key="CountToVisibility" />
             <conv:InverseBooleanConverter x:Key="InverseBool" />
             <conv:IsNewToTitleConverter x:Key="BoolToTitle" />
+            <conv:InitialConverter x:Key="Initial" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
             <!-- ViewModel ↔ View 매핑 -->
