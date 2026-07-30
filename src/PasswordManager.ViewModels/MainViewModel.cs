@@ -43,6 +43,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>같은 사이트끼리 묶은 그룹 목록(검색 필터 적용). 뷰는 이걸 렌더링한다.</summary>
     public ObservableCollection<SiteGroup> Groups { get; } = new();
 
+    /// <summary>전체 항목에 존재하는 고유 태그들(가나다/알파벳 순). 태그 pane이 이걸 렌더링한다.</summary>
+    public ObservableCollection<string> AvailableTags { get; } = new();
+
+    /// <summary>현재 켜져 있는 태그 필터. 여러 개면 OR(합집합)로 묶고 검색어와는 AND(TD-029).</summary>
+    public ObservableCollection<string> SelectedTags { get; } = new();
+
     [ObservableProperty]
     private string _searchQuery = string.Empty;
 
@@ -70,15 +76,21 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSearchQueryChanged(string value) => Refresh();
 
-    /// <summary>볼트에서 항목을 다시 읽어 검색 필터를 적용해 목록을 갱신한다.</summary>
+    /// <summary>볼트에서 항목을 다시 읽어 검색·태그 필터를 적용해 목록을 갱신한다.</summary>
     public void Refresh()
     {
+        RebuildAvailableTags(); // 태그 목록·선택 상태를 현재 볼트 기준으로 먼저 정리
+
         var query = SearchQuery?.Trim() ?? string.Empty;
         IEnumerable<VaultEntry> source = _vault.Entries;
         if (query.Length > 0)
             source = source.Where(e =>
                 e.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 e.Login.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+        // 선택 태그끼리는 OR(하나라도 달렸으면 통과), 검색어와는 AND로 결합(TD-029).
+        if (SelectedTags.Count > 0)
+            source = source.Where(e => e.Tags.Any(SelectedTags.Contains));
 
         var filtered = source.ToList();
 
@@ -99,6 +111,45 @@ public sealed partial class MainViewModel : ObservableObject
             }
             group.Accounts.Add(entry);
         }
+    }
+
+    /// <summary>전체 항목의 고유 태그로 <see cref="AvailableTags"/>를 다시 만들고,
+    /// 더 이상 존재하지 않는 태그는 <see cref="SelectedTags"/>에서 걷어낸다.</summary>
+    private void RebuildAvailableTags()
+    {
+        var tags = _vault.Entries
+            .SelectMany(e => e.Tags)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(t => t, StringComparer.CurrentCulture)
+            .ToList();
+
+        AvailableTags.Clear();
+        foreach (var tag in tags)
+            AvailableTags.Add(tag);
+
+        // 사라진 태그(예: 마지막 보유 항목 삭제)는 필터에서 제거한다.
+        for (var i = SelectedTags.Count - 1; i >= 0; i--)
+            if (!AvailableTags.Contains(SelectedTags[i]))
+                SelectedTags.RemoveAt(i);
+    }
+
+    /// <summary>태그 필터를 켜거나 끈다(이미 켜져 있으면 해제). design 3-pane 태그 필터.</summary>
+    [RelayCommand]
+    private void ToggleTag(string? tag)
+    {
+        if (string.IsNullOrEmpty(tag)) return;
+        if (!SelectedTags.Remove(tag))
+            SelectedTags.Add(tag);
+        Refresh();
+    }
+
+    /// <summary>모든 태그 필터를 해제한다.</summary>
+    [RelayCommand]
+    private void ClearTags()
+    {
+        if (SelectedTags.Count == 0) return;
+        SelectedTags.Clear();
+        Refresh();
     }
 
     /// <summary>

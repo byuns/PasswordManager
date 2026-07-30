@@ -42,6 +42,16 @@ public class MainViewModelTests
         return m;
     }
 
+    /// <summary>태그가 붙은 항목들로 언락된 매니저를 만든다(태그 필터 테스트용).</summary>
+    private static VaultManager UnlockedWithTagged(params (string title, string login, string[] tags)[] entries)
+    {
+        var m = new VaultManager(new InMemoryStore(), Path);
+        m.CreateNew(Master, Light);
+        foreach (var (title, login, tags) in entries)
+            m.Add(new VaultEntry { Title = title, Login = login, Password = "pw", Tags = tags.ToList() });
+        return m;
+    }
+
     [Fact]
     public void Loads_all_entries_on_construction()
     {
@@ -300,5 +310,107 @@ public class MainViewModelTests
         vm.RevealCommand.Execute(target);
 
         Assert.Same(target, requested);
+    }
+
+    // --- 태그 필터 (TD-029: 선택 태그끼리 OR 합집합, 검색어와는 AND) ---
+
+    [Fact]
+    public void AvailableTags_lists_distinct_tags_across_all_entries()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("A", "a", new[] { "work", "important" }),
+            ("B", "b", new[] { "shop", "work" })));
+
+        Assert.Equal(new[] { "important", "shop", "work" }, vm.AvailableTags.OrderBy(t => t));
+    }
+
+    [Fact]
+    public void ToggleTag_filters_entries_by_that_tag()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("Steam", "g", new[] { "game" }),
+            ("Bank", "b", new[] { "finance" })));
+
+        vm.ToggleTagCommand.Execute("game");
+
+        Assert.Single(vm.Entries);
+        Assert.Equal("Steam", vm.Entries[0].Title);
+        Assert.Contains("game", vm.SelectedTags);
+    }
+
+    [Fact]
+    public void Multiple_selected_tags_use_OR_union()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("Steam", "g", new[] { "game" }),
+            ("Bank", "b", new[] { "finance" }),
+            ("News", "n", new[] { "read" })));
+
+        vm.ToggleTagCommand.Execute("game");
+        vm.ToggleTagCommand.Execute("finance");
+
+        Assert.Equal(2, vm.Entries.Count);
+        Assert.Contains(vm.Entries, e => e.Title == "Steam");
+        Assert.Contains(vm.Entries, e => e.Title == "Bank");
+    }
+
+    [Fact]
+    public void Tag_filter_combines_with_search_as_AND()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("Steam", "g", new[] { "game" }),
+            ("GameStop", "shop", new[] { "game" })));
+
+        vm.ToggleTagCommand.Execute("game"); // 둘 다 game
+        vm.SearchQuery = "steam";            // 그 중 steam만
+
+        Assert.Single(vm.Entries);
+        Assert.Equal("Steam", vm.Entries[0].Title);
+    }
+
+    [Fact]
+    public void Toggling_tag_off_clears_that_filter()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("Steam", "g", new[] { "game" }),
+            ("Bank", "b", new[] { "finance" })));
+
+        vm.ToggleTagCommand.Execute("game");
+        Assert.Single(vm.Entries);
+
+        vm.ToggleTagCommand.Execute("game"); // 다시 눌러 해제
+        Assert.Equal(2, vm.Entries.Count);
+        Assert.DoesNotContain("game", vm.SelectedTags);
+    }
+
+    [Fact]
+    public void ClearTags_removes_all_tag_filters()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("Steam", "g", new[] { "game" }),
+            ("Bank", "b", new[] { "finance" })));
+        vm.ToggleTagCommand.Execute("game");
+        vm.ToggleTagCommand.Execute("finance");
+
+        vm.ClearTagsCommand.Execute(null);
+
+        Assert.Empty(vm.SelectedTags);
+        Assert.Equal(2, vm.Entries.Count);
+    }
+
+    [Fact]
+    public void Deleting_last_entry_of_a_tag_prunes_it_from_selection()
+    {
+        var manager = UnlockedWithTagged(
+            ("Steam", "g", new[] { "game" }),
+            ("Bank", "b", new[] { "finance" }));
+        var vm = new MainViewModel(manager);
+        vm.ToggleTagCommand.Execute("game");
+
+        vm.DeleteCommand.Execute(vm.Entries.First(e => e.Title == "Steam"));
+
+        Assert.DoesNotContain("game", vm.AvailableTags);
+        Assert.DoesNotContain("game", vm.SelectedTags);
+        Assert.Single(vm.Entries); // 태그 필터가 걷혀 남은 Bank가 보인다
     }
 }
