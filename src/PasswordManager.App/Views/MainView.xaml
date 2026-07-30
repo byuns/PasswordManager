@@ -28,30 +28,34 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ItemsControl Grid.Column="0" ItemsSource="{Binding AvailableTags}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <ToggleButton Margin="0,0,6,6" Padding="10,2"
-                                      Command="{Binding DataContext.ToggleTagCommand,
-                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                      CommandParameter="{Binding}">
-                            <ToggleButton.IsChecked>
-                                <MultiBinding Converter="{StaticResource TagSelected}" Mode="OneWay">
-                                    <Binding />
-                                    <Binding Path="DataContext.SelectedTags"
-                                             RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                </MultiBinding>
-                            </ToggleButton.IsChecked>
-                            <TextBlock Text="{Binding StringFormat='#{0}'}" />
-                        </ToggleButton>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <!-- 태그가 많아도 세로 공간을 잡아먹지 않도록 한 줄 고정 + 가로 스크롤(TD-030) -->
+            <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding AvailableTags}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ToggleButton Margin="0,0,6,0" Padding="10,2"
+                                          Command="{Binding DataContext.ToggleTagCommand,
+                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          CommandParameter="{Binding}">
+                                <ToggleButton.IsChecked>
+                                    <MultiBinding Converter="{StaticResource TagSelected}" Mode="OneWay">
+                                        <Binding />
+                                        <Binding Path="DataContext.SelectedTags"
+                                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                    </MultiBinding>
+                                </ToggleButton.IsChecked>
+                                <TextBlock Text="{Binding StringFormat='#{0}'}" />
+                            </ToggleButton>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
             <ui:Button Grid.Column="1" Content="지우기" Icon="{ui:SymbolIcon Dismiss24}"
                        Appearance="Secondary" Margin="8,0,0,0" VerticalAlignment="Top"
                        Command="{Binding ClearTagsCommand}"
