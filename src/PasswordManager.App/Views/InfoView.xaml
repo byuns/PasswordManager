@@ -7,34 +7,43 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-    <StackPanel Margin="24">
+    <StackPanel Margin="24" MaxWidth="680" HorizontalAlignment="Left">
         <ui:TextBlock FontTypography="Title" Text="정보" Margin="0,0,0,20" />
 
-        <ui:CardControl Icon="{ui:SymbolIcon Info24}" Margin="0,0,0,8">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock FontTypography="BodyStrong" Text="{Binding AppName}" />
-                    <ui:TextBlock FontTypography="Caption"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="로컬 비밀번호 매니저" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <ui:TextBlock FontTypography="Body"
-                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                          Text="{Binding Version, StringFormat='버전 {0}'}"
-                          VerticalAlignment="Center" />
-        </ui:CardControl>
+        <!-- 라벨(왼쪽) + 값(오른쪽)을 한 그리드로 맞춰 정렬 -->
+        <Border Style="{StaticResource CardBorderStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-        <ui:CardControl Icon="{ui:SymbolIcon Folder24}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock FontTypography="BodyStrong" Text="볼트 파일 위치" />
-                    <ui:TextBlock FontTypography="Caption"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="{Binding VaultPath}" TextWrapping="Wrap"
-                                  TextTrimming="CharacterEllipsis" MaxWidth="520" />
-                </StackPanel>
-            </ui:CardControl.Header>
-        </ui:CardControl>
+                <ui:TextBlock Grid.Row="0" Grid.Column="0" Text="이름" VerticalAlignment="Top"
+                              Margin="0,0,32,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppName}" VerticalAlignment="Top"
+                              FontTypography="BodyStrong" Margin="0,0,0,12" />
+
+                <ui:TextBlock Grid.Row="1" Grid.Column="0" Text="설명" VerticalAlignment="Top"
+                              Margin="0,0,32,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="1" Text="로컬 비밀번호 매니저" VerticalAlignment="Top"
+                              Margin="0,0,0,12" />
+
+                <ui:TextBlock Grid.Row="2" Grid.Column="0" Text="버전" VerticalAlignment="Top"
+                              Margin="0,0,32,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Version}" VerticalAlignment="Top"
+                              Margin="0,0,0,12" />
+
+                <ui:TextBlock Grid.Row="3" Grid.Column="0" Text="볼트 위치" VerticalAlignment="Top"
+                              Margin="0,0,32,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ui:TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding VaultPath}" VerticalAlignment="Top"
+                              TextWrapping="Wrap" />
+            </Grid>
+        </Border>
     </StackPanel>
 </UserControl>

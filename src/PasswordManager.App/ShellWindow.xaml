@@ -31,9 +31,9 @@
                     BorderThickness="0,0,1,0"
                     Visibility="{Binding IsSidebarVisible, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel Margin="8">
-                    <ui:Button DockPanel.Dock="Bottom" Content="잠금"
-                               Icon="{ui:SymbolIcon LockClosed24}"
-                               HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                    <ui:Button DockPanel.Dock="Bottom" Icon="{ui:SymbolIcon LockClosed24}"
+                               Appearance="Transparent" ToolTip="잠금"
+                               HorizontalAlignment="Left" HorizontalContentAlignment="Center"
                                Command="{Binding LockCommand}" Margin="0,4,0,0" />
                     <StackPanel>
                         <ui:Button Content="항목" Icon="{ui:SymbolIcon Key24}"
