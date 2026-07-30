@@ -143,6 +143,49 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void Same_site_accounts_are_grouped_together()
+    {
+        var vm = new MainViewModel(UnlockedWith(
+            ("GitHub", "personal"), ("Google", "me"), ("GitHub", "work")));
+
+        Assert.Equal(2, vm.Groups.Count);
+        var github = vm.Groups.First(g => g.SiteName == "GitHub");
+        Assert.Equal(2, github.Accounts.Count);
+        Assert.True(github.HasMultipleAccounts);
+        Assert.Equal(new[] { "personal", "work" }, github.Accounts.Select(a => a.Login));
+    }
+
+    [Fact]
+    public void Site_grouping_is_case_insensitive()
+    {
+        var vm = new MainViewModel(UnlockedWith(("github", "a"), ("GitHub", "b")));
+
+        Assert.Single(vm.Groups);
+        Assert.Equal(2, vm.Groups[0].Accounts.Count);
+    }
+
+    [Fact]
+    public void Single_account_site_is_a_group_of_one()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
+
+        Assert.Single(vm.Groups);
+        Assert.False(vm.Groups[0].HasMultipleAccounts);
+    }
+
+    [Fact]
+    public void Search_filters_then_regroups()
+    {
+        var vm = new MainViewModel(UnlockedWith(
+            ("GitHub", "personal"), ("GitHub", "work"), ("Google", "me")));
+
+        vm.SearchQuery = "google";
+
+        Assert.Single(vm.Groups);
+        Assert.Equal("Google", vm.Groups[0].SiteName);
+    }
+
+    [Fact]
     public void CopyLogin_copies_the_login_to_clipboard()
     {
         var clip = new FakeClipboard();

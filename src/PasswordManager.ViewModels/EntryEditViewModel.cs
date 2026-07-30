@@ -28,6 +28,7 @@ public sealed partial class EntryEditViewModel : ObservableObject
             Login = existing.Login;
             Password = existing.Password;
             Notes = existing.Notes;
+            TagsText = string.Join(", ", existing.Tags);
         }
     }
 
@@ -42,6 +43,9 @@ public sealed partial class EntryEditViewModel : ObservableObject
     [ObservableProperty] private string _login = string.Empty;
     [ObservableProperty] private string _password = string.Empty;
     [ObservableProperty] private string _notes = string.Empty;
+
+    /// <summary>태그 입력(쉼표로 구분). 저장 시 <see cref="ParseTags"/>로 리스트로 변환한다.</summary>
+    [ObservableProperty] private string _tagsText = string.Empty;
 
     /// <summary>저장 완료 시 발생. 셸이 구독해 메인으로 돌아간다.</summary>
     public event EventHandler? Saved;
@@ -63,6 +67,7 @@ public sealed partial class EntryEditViewModel : ObservableObject
                 Login = Login,
                 Password = Password,
                 Notes = Notes,
+                Tags = ParseTags(TagsText),
             });
         }
         else
@@ -78,12 +83,18 @@ public sealed partial class EntryEditViewModel : ObservableObject
                 Login = Login,
                 Password = Password,
                 Notes = Notes,
-                Tags = _original.Tags,
+                Tags = ParseTags(TagsText),
                 TotpSecret = _original.TotpSecret,
             });
         }
         Saved?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>쉼표로 구분한 태그 문자열을 트림·빈값 제거·중복 제거(대소문자 무시)해 리스트로 만든다.</summary>
+    private static List<string> ParseTags(string text) =>
+        text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     [RelayCommand]
     private void Cancel() => Cancelled?.Invoke(this, EventArgs.Empty);

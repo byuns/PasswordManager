@@ -29,66 +29,96 @@
 
         <!-- 항목 카드 리스트 (design-ux §4) -->
         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-            <ItemsControl ItemsSource="{Binding Entries}">
+            <ItemsControl ItemsSource="{Binding Groups}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
+                        <!-- 사이트 그룹 카드: 헤더(아바타+사이트명) + 계정 행들 -->
                         <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <!-- 사이트 이니셜 아바타 -->
-                                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20"
-                                        Background="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                        VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Title, Converter={StaticResource Initial}}"
-                                               Foreground="White" FontSize="18" FontWeight="SemiBold"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-
-                                <!-- 사이트명 + 아이디(옆에 복사 버튼) -->
-                                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <ui:TextBlock FontTypography="BodyStrong" Text="{Binding Title}"
+                            <StackPanel>
+                                <!-- 사이트 헤더 -->
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="40" Height="40" CornerRadius="20"
+                                            Background="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SiteName, Converter={StaticResource Initial}}"
+                                                   Foreground="White" FontSize="18" FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <ui:TextBlock FontTypography="BodyStrong" Text="{Binding SiteName}"
+                                                  Margin="12,0,0,0" VerticalAlignment="Center"
                                                   TextTrimming="CharacterEllipsis" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                        <ui:TextBlock FontTypography="Caption" Text="{Binding Login}"
-                                                      VerticalAlignment="Center"
-                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                      TextTrimming="CharacterEllipsis" />
-                                        <ui:Button Padding="4" Margin="6,0,0,0" VerticalAlignment="Center"
-                                                   Icon="{ui:SymbolIcon Copy16}" FontSize="11" ToolTip="아이디 복사"
-                                                   Visibility="{Binding Login, Converter={StaticResource StringNotEmptyToVisibility}}"
-                                                   Command="{Binding DataContext.CopyLoginCommand,
-                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                   CommandParameter="{Binding Login}" />
-                                    </StackPanel>
                                 </StackPanel>
 
-                                <!-- 마지막 변경일 + 액션 -->
-                                <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                    <ui:TextBlock FontTypography="Caption" HorizontalAlignment="Right"
-                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                  Text="{Binding LastChangedAt, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                        <ui:Button Icon="{ui:SymbolIcon Eye24}" ToolTip="보기"
-                                                   Command="{Binding DataContext.RevealCommand,
-                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                   CommandParameter="{Binding}" />
-                                        <ui:Button Icon="{ui:SymbolIcon Edit24}" ToolTip="편집" Margin="4,0,0,0"
-                                                   Command="{Binding DataContext.EditCommand,
-                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                   CommandParameter="{Binding}" />
-                                        <ui:Button Icon="{ui:SymbolIcon Delete24}" ToolTip="삭제" Margin="4,0,0,0"
-                                                   Appearance="Danger"
-                                                   Command="{Binding DataContext.DeleteCommand,
-                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                   CommandParameter="{Binding}" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Grid>
+                                <!-- 계정 행들 -->
+                                <ItemsControl ItemsSource="{Binding Accounts}" Margin="0,4,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="52,6,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- 아이디(+복사) + 태그 -->
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <ui:TextBlock Text="{Binding Login}" VerticalAlignment="Center"
+                                                                      TextTrimming="CharacterEllipsis"
+                                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                        <ui:Button Padding="4" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                                   Icon="{ui:SymbolIcon Copy16}" FontSize="11" ToolTip="아이디 복사"
+                                                                   Visibility="{Binding Login, Converter={StaticResource StringNotEmptyToVisibility}}"
+                                                                   Command="{Binding DataContext.CopyLoginCommand,
+                                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                   CommandParameter="{Binding Login}" />
+                                                    </StackPanel>
+
+                                                    <!-- 태그 칩 (최대 2개) -->
+                                                    <ItemsControl Margin="0,4,0,0"
+                                                                  ItemsSource="{Binding Tags, Converter={StaticResource LimitTags}, ConverterParameter=2}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Orientation="Horizontal" />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                                        CornerRadius="4" Padding="6,1" Margin="0,0,4,0">
+                                                                    <ui:TextBlock FontTypography="Caption" Text="{Binding}"
+                                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+
+                                                <!-- 마지막 변경일 + 액션 -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                                    <ui:TextBlock FontTypography="Caption" HorizontalAlignment="Right"
+                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                  Text="{Binding LastChangedAt, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <ui:Button Icon="{ui:SymbolIcon Eye24}" ToolTip="보기"
+                                                                   Command="{Binding DataContext.RevealCommand,
+                                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                   CommandParameter="{Binding}" />
+                                                        <ui:Button Icon="{ui:SymbolIcon Edit24}" ToolTip="편집" Margin="4,0,0,0"
+                                                                   Command="{Binding DataContext.EditCommand,
+                                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                   CommandParameter="{Binding}" />
+                                                        <ui:Button Icon="{ui:SymbolIcon Delete24}" ToolTip="삭제" Margin="4,0,0,0"
+                                                                   Appearance="Danger"
+                                                                   Command="{Binding DataContext.DeleteCommand,
+                                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                   CommandParameter="{Binding}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

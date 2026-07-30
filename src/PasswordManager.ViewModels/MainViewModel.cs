@@ -6,8 +6,23 @@ using PasswordManager.Core.Vault;
 
 namespace PasswordManager.ViewModels;
 
+/// <summary>같은 사이트(제목)로 묶인 계정들의 그룹. 목록은 사이트별로 묶어 보여준다(TD-003 그룹 표시).</summary>
+public sealed class SiteGroup
+{
+    public SiteGroup(string siteName) => SiteName = siteName;
+
+    /// <summary>그룹 헤더에 표시할 사이트명.</summary>
+    public string SiteName { get; }
+
+    /// <summary>이 사이트에 속한 계정들(입력 순서 보존).</summary>
+    public ObservableCollection<VaultEntry> Accounts { get; } = new();
+
+    /// <summary>계정이 둘 이상인지(뷰가 헤더 강조 등에 활용).</summary>
+    public bool HasMultipleAccounts => Accounts.Count > 1;
+}
+
 /// <summary>
-/// 언락 후 메인 화면 ViewModel. 항목 목록을 보여주고 제목·로그인으로 검색하며,
+/// 언락 후 메인 화면 ViewModel. 항목 목록을 사이트별로 묶어 보여주고 제목·로그인으로 검색하며,
 /// 선택 항목의 편집/삭제와 볼트 잠금을 처리한다. 추가/편집은 이벤트로 셸에 위임한다.
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
@@ -22,8 +37,11 @@ public sealed partial class MainViewModel : ObservableObject
         Refresh();
     }
 
-    /// <summary>현재 화면에 보이는(검색 필터가 적용된) 항목들.</summary>
+    /// <summary>현재 화면에 보이는(검색 필터가 적용된) 항목들(평면).</summary>
     public ObservableCollection<VaultEntry> Entries { get; } = new();
+
+    /// <summary>같은 사이트끼리 묶은 그룹 목록(검색 필터 적용). 뷰는 이걸 렌더링한다.</summary>
+    public ObservableCollection<SiteGroup> Groups { get; } = new();
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -62,9 +80,25 @@ public sealed partial class MainViewModel : ObservableObject
                 e.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 e.Login.Contains(query, StringComparison.OrdinalIgnoreCase));
 
+        var filtered = source.ToList();
+
         Entries.Clear();
-        foreach (var entry in source)
+        foreach (var entry in filtered)
             Entries.Add(entry);
+
+        // 사이트명(대소문자 무시) 첫 등장 순서를 보존하며 그룹으로 묶는다.
+        Groups.Clear();
+        var index = new Dictionary<string, SiteGroup>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in filtered)
+        {
+            if (!index.TryGetValue(entry.Title, out var group))
+            {
+                group = new SiteGroup(entry.Title);
+                index[entry.Title] = group;
+                Groups.Add(group);
+            }
+            group.Accounts.Add(entry);
+        }
     }
 
     /// <summary>

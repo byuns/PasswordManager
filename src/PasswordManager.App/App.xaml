@@ -20,6 +20,7 @@
             <conv:IsNewToTitleConverter x:Key="BoolToTitle" />
             <conv:InitialConverter x:Key="Initial" />
             <conv:OtpAuthToQrConverter x:Key="OtpAuthToQr" />
+            <conv:LimitTagsConverter x:Key="LimitTags" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
             <!-- ViewModel ↔ View 매핑 -->

@@ -71,6 +71,34 @@ public class EntryEditViewModelTests
     }
 
     [Fact]
+    public void Save_parses_comma_separated_tags_trimming_and_deduping()
+    {
+        var manager = Unlocked();
+        var vm = new EntryEditViewModel(manager)
+        {
+            Title = "GitHub",
+            TagsText = " work , dev ,work,  ",
+        };
+
+        vm.SaveCommand.Execute(null);
+
+        var e = Assert.Single(manager.Entries);
+        Assert.Equal(new[] { "work", "dev" }, e.Tags);
+    }
+
+    [Fact]
+    public void Editing_prefills_tags_text_from_existing()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry { Title = "GitHub", Password = "pw", Tags = { "work", "dev" } });
+        var existing = manager.Entries[0];
+
+        var vm = new EntryEditViewModel(manager, existing);
+
+        Assert.Equal("work, dev", vm.TagsText);
+    }
+
+    [Fact]
     public void Editing_prefills_fields_from_existing()
     {
         var manager = Unlocked();
