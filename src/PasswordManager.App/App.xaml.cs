@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Windows;
 using System.Windows.Media;
@@ -43,9 +44,18 @@ public partial class App : Application
 
         var manager = new VaultManager(new FileVaultStore(), vaultPath);
         var clipboard = new ClipboardCopier(new WpfClipboardService(), new DispatcherScheduler());
-        var shell = new ShellViewModel(manager, clipboard: clipboard);
+        var shell = new ShellViewModel(manager, clipboard: clipboard,
+            appVersion: GetAppVersion(), vaultPath: vaultPath);
 
         new ShellWindow { DataContext = shell }.Show();
+    }
+
+    /// <summary>어셈블리의 정보 버전(없으면 파일 버전)을 사람이 읽는 문자열로 돌려준다.</summary>
+    private static string GetAppVersion()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        return info ?? asm.GetName().Version?.ToString() ?? "";
     }
 
     protected override void OnExit(ExitEventArgs e)

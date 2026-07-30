@@ -38,6 +38,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly VaultManager _vault;
     private readonly KdfParams _kdf;
     private readonly ClipboardCopier? _clipboard;
+    private readonly string? _appVersion;
+    private readonly string? _vaultPath;
     private MainViewModel? _main;
     private SettingsViewModel? _settings;
     private InfoViewModel? _info;
@@ -61,11 +63,14 @@ public sealed partial class ShellViewModel : ObservableObject
     partial void OnSectionChanged(ShellSection? value) =>
         OnPropertyChanged(nameof(IsSidebarVisible));
 
-    public ShellViewModel(VaultManager vault, KdfParams? kdf = null, ClipboardCopier? clipboard = null)
+    public ShellViewModel(VaultManager vault, KdfParams? kdf = null, ClipboardCopier? clipboard = null,
+        string? appVersion = null, string? vaultPath = null)
     {
         _vault = vault;
         _kdf = kdf ?? KdfParams.Recommended;
         _clipboard = clipboard;
+        _appVersion = appVersion;
+        _vaultPath = vaultPath;
 
         if (_vault.Exists())
             StartUnlock();
@@ -158,7 +163,7 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void ShowInfo()
     {
-        _info ??= new InfoViewModel();
+        _info ??= new InfoViewModel(version: _appVersion, vaultPath: _vaultPath);
         CurrentViewModel = _info;
         Section = ShellSection.Info;
     }

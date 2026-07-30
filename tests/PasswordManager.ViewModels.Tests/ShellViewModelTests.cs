@@ -382,6 +382,24 @@ public class ShellViewModelTests
     }
 
     [Fact]
+    public async Task Show_info_exposes_injected_version_and_path()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        var shell = new ShellViewModel(new VaultManager(store, Path), Light,
+            vaultPath: @"C:\v\vault.dat", appVersion: "9.9.9");
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.Password = Master;
+        await unlock.UnlockCommand.ExecuteAsync(null);
+
+        shell.ShowInfoCommand.Execute(null);
+
+        var info = Assert.IsType<InfoViewModel>(shell.CurrentViewModel);
+        Assert.Equal("9.9.9", info.Version);
+        Assert.Equal(@"C:\v\vault.dat", info.VaultPath);
+    }
+
+    [Fact]
     public async Task Show_items_returns_to_same_main()
     {
         var (shell, main) = await OpenedShellAsync();

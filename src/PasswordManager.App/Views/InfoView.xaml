@@ -8,11 +8,33 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
     <StackPanel Margin="24">
-        <ui:TextBlock FontTypography="Title" Text="정보" Margin="0,0,0,16" />
-        <ui:TextBlock FontTypography="Body" Text="{Binding AppName}" />
-        <ui:TextBlock FontTypography="Caption"
-                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                      Text="앱 버전·볼트 파일 위치가 이곳에 표시됩니다. (준비 중)"
-                      TextWrapping="Wrap" Margin="0,8,0,0" />
+        <ui:TextBlock FontTypography="Title" Text="정보" Margin="0,0,0,20" />
+
+        <ui:CardControl Icon="{ui:SymbolIcon Info24}" Margin="0,0,0,8">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock FontTypography="BodyStrong" Text="{Binding AppName}" />
+                    <ui:TextBlock FontTypography="Caption"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="로컬 비밀번호 매니저" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:TextBlock FontTypography="Body"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Text="{Binding Version, StringFormat='버전 {0}'}"
+                          VerticalAlignment="Center" />
+        </ui:CardControl>
+
+        <ui:CardControl Icon="{ui:SymbolIcon Folder24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock FontTypography="BodyStrong" Text="볼트 파일 위치" />
+                    <ui:TextBlock FontTypography="Caption"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="{Binding VaultPath}" TextWrapping="Wrap"
+                                  TextTrimming="CharacterEllipsis" MaxWidth="520" />
+                </StackPanel>
+            </ui:CardControl.Header>
+        </ui:CardControl>
     </StackPanel>
 </UserControl>
