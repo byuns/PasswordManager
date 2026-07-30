@@ -86,6 +86,48 @@ public class SettingsViewModelTests
     }
 
     [Fact]
+    public void Export_and_Import_commands_raise_requests()
+    {
+        var vm = new SettingsViewModel(Unlocked());
+        var export = false; var import = false;
+        vm.ExportRequested += (_, _) => export = true;
+        vm.ImportRequested += (_, _) => import = true;
+
+        vm.ExportCommand.Execute(null);
+        vm.ImportCommand.Execute(null);
+
+        Assert.True(export);
+        Assert.True(import);
+    }
+
+    [Fact]
+    public void BuildExportCsv_returns_current_entries_as_csv()
+    {
+        var m = Unlocked();
+        m.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "pw" });
+        var vm = new SettingsViewModel(m);
+
+        var csv = vm.BuildExportCsv();
+
+        Assert.Contains("title,url,login,password,notes,tags", csv);
+        Assert.Contains("Steam", csv);
+    }
+
+    [Fact]
+    public void PerformImport_adds_entries_and_reports_count()
+    {
+        var m = Unlocked();
+        var vm = new SettingsViewModel(m);
+        var csv = "title,url,login,password,notes,tags\r\nSteam,,gamer,pw,,\r\n";
+
+        var count = vm.PerformImport(csv);
+
+        Assert.Equal(1, count);
+        Assert.Single(m.Entries);
+        Assert.False(string.IsNullOrEmpty(vm.StatusMessage));
+    }
+
+    [Fact]
     public void IsOtpRegistered_reflects_vault_state_after_refresh()
     {
         var manager = Unlocked();

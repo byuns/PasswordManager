@@ -212,6 +212,30 @@ public sealed class VaultManager
         Lock();
     }
 
+    /// <summary>현재 항목들을 자체 CSV(평문)로 내보낸다. 호출부가 강한 경고를 거쳐야 한다(design 7.7).</summary>
+    public string ExportCsv() => CsvVault.Export(RequireUnlocked().Entries);
+
+    /// <summary>
+    /// CSV에서 항목을 읽어 모두 새 항목으로 추가하고 저장한다(중복 검사 없이 append). 추가한 개수를 돌려준다.
+    /// id·시각은 앱이 새로 부여한다(입력값을 신뢰하지 않음). design 7.7.
+    /// </summary>
+    public int ImportCsv(string csv)
+    {
+        var data = RequireUnlocked();
+        var imported = CsvVault.Parse(csv);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var entry in imported)
+        {
+            entry.Id = Guid.NewGuid().ToString();
+            entry.CreatedAt = now;
+            entry.UpdatedAt = now;
+            entry.LastChangedAt = now;
+            data.Entries.Add(entry);
+        }
+        if (imported.Count > 0) Persist();
+        return imported.Count;
+    }
+
     /// <summary>id로 항목을 삭제하고 저장한다.</summary>
     public void Remove(string id)
     {

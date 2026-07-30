@@ -37,6 +37,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>복원 요청. 뷰가 백업 파일 선택 대화상자를 연다.</summary>
     public event EventHandler? RestoreRequested;
 
+    /// <summary>내보내기 요청. 뷰가 저장 위치 대화상자를 연다(평문 CSV — 경고 후).</summary>
+    public event EventHandler? ExportRequested;
+
+    /// <summary>가져오기 요청. 뷰가 CSV 파일 선택 대화상자를 연다.</summary>
+    public event EventHandler? ImportRequested;
+
     /// <summary>복원으로 세션이 닫혔을 때 발생. 셸이 언락 화면으로 돌아간다.</summary>
     public event EventHandler? Locked;
 
@@ -58,6 +64,23 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private void Restore() => RestoreRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void Export() => ExportRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void Import() => ImportRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>현재 항목을 CSV(평문)로 만들어 돌려준다. 뷰가 경고 후 파일에 쓴다(design 7.7).</summary>
+    public string BuildExportCsv() => _vault.ExportCsv();
+
+    /// <summary>뷰가 읽어온 CSV 텍스트로 항목을 가져오고(모두 새 항목 추가) 개수를 돌려준다.</summary>
+    public int PerformImport(string csv)
+    {
+        var count = _vault.ImportCsv(csv);
+        StatusMessage = $"{count}개 항목을 가져왔습니다.";
+        return count;
+    }
 
     /// <summary>선택한 경로로 볼트를 백업한다(뷰가 대화상자에서 경로를 받아 호출).</summary>
     public void PerformBackup(string path)
