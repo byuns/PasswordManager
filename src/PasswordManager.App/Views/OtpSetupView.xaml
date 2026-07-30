@@ -11,8 +11,15 @@
         <StackPanel>
             <ui:TextBlock FontTypography="Title" Text="OTP 등록" Margin="0,0,0,8" />
             <ui:TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                          Text="폰의 Authenticator 앱에 아래 secret(또는 otpauth 링크)을 등록한 뒤, 앱에 표시되는 6자리 코드를 입력해 확인하세요."
+                          Text="폰의 Authenticator 앱으로 아래 QR을 스캔(또는 secret·otpauth 링크를 등록)한 뒤, 앱에 표시되는 6자리 코드를 입력해 확인하세요."
                           Margin="0,0,0,16" />
+
+            <Border Background="White" CornerRadius="8" Padding="12"
+                    HorizontalAlignment="Center" Margin="0,0,0,16">
+                <Image Source="{Binding OtpAuthUri, Converter={StaticResource OtpAuthToQr}}"
+                       Width="200" Height="200" Stretch="Uniform"
+                       RenderOptions.BitmapScalingMode="NearestNeighbor" />
+            </Border>
 
             <ui:TextBlock Text="Secret" Margin="0,0,0,4" />
             <ui:TextBox Text="{Binding Secret, Mode=OneWay}" IsReadOnly="True" />

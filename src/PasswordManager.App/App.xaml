@@ -19,6 +19,7 @@
             <conv:InverseBooleanConverter x:Key="InverseBool" />
             <conv:IsNewToTitleConverter x:Key="BoolToTitle" />
             <conv:InitialConverter x:Key="Initial" />
+            <conv:OtpAuthToQrConverter x:Key="OtpAuthToQr" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
             <!-- ViewModel ↔ View 매핑 -->
