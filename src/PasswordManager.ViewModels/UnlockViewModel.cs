@@ -31,14 +31,34 @@ public sealed partial class UnlockViewModel : ObservableObject
     [ObservableProperty]
     private string? _errorMessage;
 
+    /// <summary>파일 손상이 감지된 상태(비번 오류와 구분). 이때만 "백업에서 복원" CTA를 노출한다(S9).</summary>
+    [ObservableProperty]
+    private bool _isCorrupted;
+
     /// <summary>언락 성공 시 발생. 셸이 구독해 메인 화면으로 전환한다.</summary>
     public event EventHandler? Unlocked;
 
     /// <summary>"비밀번호를 잊으셨나요?" 요청. 셸이 복구 화면으로 전환한다(design 5.7).</summary>
     public event EventHandler? RecoveryRequested;
 
+    /// <summary>"백업에서 복원" 요청. 뷰가 백업 파일 선택 대화상자를 연다(S9·TD-028).</summary>
+    public event EventHandler? RestoreRequested;
+
     [RelayCommand]
     private void ForgotPassword() => RecoveryRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void Restore() => RestoreRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>백업 파일로 볼트를 복원한다(뷰가 대화상자에서 경로를 받아 호출). 복원 후에는
+    /// 백업 시점의 마스터 비밀번호로 다시 열어야 하므로 손상 표시·오류·입력을 비운다.</summary>
+    public void PerformRestore(string backupPath)
+    {
+        _vault.Restore(backupPath);
+        IsCorrupted = false;
+        ErrorMessage = null;
+        Password = string.Empty;
+    }
 
     private bool CanUnlock() => !IsBusy && !string.IsNullOrEmpty(Password);
 
@@ -46,6 +66,7 @@ public sealed partial class UnlockViewModel : ObservableObject
     private async Task UnlockAsync()
     {
         ErrorMessage = null;
+        IsCorrupted = false;
 
         // 재시도 제한이 걸려 있으면 비번을 확인하지 않고 남은 시간을 안내한다(TD-024).
         if (_throttle?.RemainingLockout() is { } remaining)
@@ -71,8 +92,9 @@ public sealed partial class UnlockViewModel : ObservableObject
         catch (VaultCorruptedException)
         {
             // 비번은 맞지만 파일 본문 인증이 실패한 경우 = 파일 손상(design 5.3·12). 비번 시도 실패가
-            // 아니므로 재시도 제한을 올리지 않고, 비번 오류와 구분되는 복구 안내를 보여준다(S9).
+            // 아니므로 재시도 제한을 올리지 않고, 비번 오류와 구분되는 복구 안내 + 복원 CTA를 노출한다(S9).
             ErrorMessage = "볼트 파일이 손상되어 열 수 없습니다. 자동 백업(vault.dat.bak)에서 복원해 보세요.";
+            IsCorrupted = true;
         }
         finally
         {

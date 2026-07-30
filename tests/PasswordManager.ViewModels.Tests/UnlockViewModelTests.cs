@@ -140,6 +140,66 @@ public class UnlockViewModelTests
     }
 
     [Fact]
+    public async Task Corrupted_unlock_flags_IsCorrupted_for_restore_cta()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        store.Save(Path, store.Load(Path) with { Tag = FlipFirstByte(store.Load(Path).Tag) });
+        var vm = new UnlockViewModel(new VaultManager(store, Path)) { Password = Master };
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsCorrupted);
+    }
+
+    [Fact]
+    public async Task Wrong_password_does_not_flag_IsCorrupted()
+    {
+        var vm = new UnlockViewModel(ManagerWithExistingVault()) { Password = "wrong-password" };
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsCorrupted);
+    }
+
+    [Fact]
+    public void RestoreCommand_raises_RestoreRequested()
+    {
+        var vm = new UnlockViewModel(ManagerWithExistingVault());
+        var raised = false;
+        vm.RestoreRequested += (_, _) => raised = true;
+
+        vm.RestoreCommand.Execute(null);
+
+        Assert.True(raised);
+    }
+
+    [Fact]
+    public async Task PerformRestore_replaces_vault_so_it_unlocks_again()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        const string Backup = "vault.dat.bak";
+        store.Save(Backup, store.Load(Path)); // 정상 볼트를 백업 경로에 보관
+        // 본문을 훼손해 손상 상태로 만든다
+        store.Save(Path, store.Load(Path) with { Tag = FlipFirstByte(store.Load(Path).Tag) });
+
+        var manager = new VaultManager(store, Path);
+        var vm = new UnlockViewModel(manager) { Password = Master };
+        await vm.UnlockCommand.ExecuteAsync(null);
+        Assert.True(vm.IsCorrupted); // 손상 감지됨
+
+        vm.PerformRestore(Backup); // 백업으로 복원
+
+        Assert.False(vm.IsCorrupted);
+        Assert.Null(vm.ErrorMessage);
+
+        vm.Password = Master; // 복원된 파일은 백업 시점 마스터 비번으로 열린다
+        await vm.UnlockCommand.ExecuteAsync(null);
+        Assert.True(manager.IsUnlocked);
+    }
+
+    [Fact]
     public void ForgotPassword_raises_RecoveryRequested()
     {
         var vm = new UnlockViewModel(ManagerWithExistingVault());
