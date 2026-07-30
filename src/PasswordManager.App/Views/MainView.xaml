@@ -8,11 +8,10 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
     <DockPanel Margin="{StaticResource ThicknessL}">
-        <!-- 상단 도구모음: 검색 + 새 항목 (보조 동작은 4단계에서 설정으로 이전) -->
+        <!-- 상단 도구모음: 검색 + 새 항목 (보조 동작은 설정 화면으로 이전) -->
         <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ui:TextBox Grid.Column="0" PlaceholderText="검색 (제목·아이디)"
@@ -20,16 +19,6 @@
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
             <ui:Button Grid.Column="1" Content="새 항목" Icon="{ui:SymbolIcon Add24}"
                        Appearance="Primary" Margin="8,0,0,0" Command="{Binding NewEntryCommand}" />
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
-                <ui:Button Icon="{ui:SymbolIcon ShieldKeyhole24}"
-                           ToolTip="OTP 등록/재설정 (2단계 인증)" Command="{Binding SetupOtpCommand}" />
-                <ui:Button Icon="{ui:SymbolIcon Key24}" ToolTip="마스터 비밀번호 변경"
-                           Margin="4,0,0,0" Command="{Binding ChangeMasterPasswordCommand}" />
-                <ui:Button Icon="{ui:SymbolIcon Save24}" ToolTip="볼트 백업"
-                           Margin="4,0,0,0" Command="{Binding BackupCommand}" />
-                <ui:Button Icon="{ui:SymbolIcon ArrowImport24}" ToolTip="볼트 복원(백업에서)"
-                           Margin="4,0,0,0" Command="{Binding RestoreCommand}" />
-            </StackPanel>
         </Grid>
 
         <!-- 상태 안내 (예: OTP 미등록 시 열람 안내) -->

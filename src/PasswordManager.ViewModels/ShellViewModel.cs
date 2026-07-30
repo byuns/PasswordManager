@@ -119,8 +119,6 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.Locked += OnLocked;
             _main.AddRequested += OnAddRequested;
             _main.EditRequested += OnEditRequested;
-            _main.ChangeMasterRequested += OnChangeMasterRequested;
-            _main.OtpSetupRequested += OnOtpSetupRequested;
             _main.RevealRequested += OnRevealRequested;
         }
         else
@@ -137,11 +135,21 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void ShowItems() => ShowMain();
 
-    /// <summary>설정 섹션으로 이동한다.</summary>
+    /// <summary>설정 섹션으로 이동한다. 최초 1회 SettingsViewModel을 만들며 보조 동작 이벤트를 배선한다.</summary>
     [RelayCommand]
     private void ShowSettings()
     {
-        _settings ??= new SettingsViewModel();
+        if (_settings is null)
+        {
+            _settings = new SettingsViewModel(_vault);
+            _settings.OtpSetupRequested += OnOtpSetupRequested;
+            _settings.ChangeMasterRequested += OnChangeMasterRequested;
+            _settings.Locked += OnLocked; // 복원 시 세션이 닫히면 언락 화면으로
+        }
+        else
+        {
+            _settings.Refresh(); // OTP 등록 상태 등 갱신
+        }
         CurrentViewModel = _settings;
         Section = ShellSection.Settings;
     }
@@ -174,10 +182,15 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.Locked -= OnLocked;
             _main.AddRequested -= OnAddRequested;
             _main.EditRequested -= OnEditRequested;
-            _main.ChangeMasterRequested -= OnChangeMasterRequested;
-            _main.OtpSetupRequested -= OnOtpSetupRequested;
             _main.RevealRequested -= OnRevealRequested;
             _main = null;
+        }
+        if (_settings is not null)
+        {
+            _settings.OtpSetupRequested -= OnOtpSetupRequested;
+            _settings.ChangeMasterRequested -= OnChangeMasterRequested;
+            _settings.Locked -= OnLocked;
+            _settings = null;
         }
         StartUnlock();
     }
@@ -212,7 +225,7 @@ public sealed partial class ShellViewModel : ObservableObject
             vm.Changed -= OnChangeMasterFinished;
             vm.Cancelled -= OnChangeMasterFinished;
         }
-        ShowMain();
+        ShowSettings(); // 설정에서 진입했으므로 설정으로 복귀
     }
 
     private void OnEditorFinished(object? sender, EventArgs e)
@@ -241,7 +254,7 @@ public sealed partial class ShellViewModel : ObservableObject
             vm.Completed -= OnOtpSetupFinished;
             vm.Cancelled -= OnOtpSetupFinished;
         }
-        ShowMain();
+        ShowSettings(); // 설정에서 진입했으므로 설정으로 복귀(등록 상태 갱신)
     }
 
     private void OnRevealRequested(object? sender, VaultEntry entry)

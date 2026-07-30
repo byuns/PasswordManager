@@ -36,9 +36,6 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string? _statusMessage;
 
-    /// <summary>앱 잠금해제 OTP가 등록되어 있는가(열람 게이트 사용 여부, 등록 버튼 표시용).</summary>
-    public bool IsOtpRegistered => _vault.HasOtp;
-
     /// <summary>볼트가 잠겼을 때 발생. 셸이 구독해 언락 화면으로 돌아간다.</summary>
     public event EventHandler? Locked;
 
@@ -48,20 +45,8 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>선택 항목 편집 요청. 셸이 편집 화면을 연다.</summary>
     public event EventHandler<VaultEntry>? EditRequested;
 
-    /// <summary>마스터 비밀번호 변경 요청. 셸이 변경 화면을 연다.</summary>
-    public event EventHandler? ChangeMasterRequested;
-
-    /// <summary>OTP 등록(재설정) 요청. 셸이 등록 마법사를 연다.</summary>
-    public event EventHandler? OtpSetupRequested;
-
     /// <summary>선택 항목 비밀번호 열람 요청. 셸이 OTP 게이트를 연다(design 7.4).</summary>
     public event EventHandler<VaultEntry>? RevealRequested;
-
-    /// <summary>백업 요청. 뷰가 저장 위치 대화상자를 연다(M6).</summary>
-    public event EventHandler? BackupRequested;
-
-    /// <summary>복원 요청. 뷰가 백업 파일 선택 대화상자를 연다(M6).</summary>
-    public event EventHandler? RestoreRequested;
 
     partial void OnSearchQueryChanged(string value) => Refresh();
 
@@ -78,8 +63,6 @@ public sealed partial class MainViewModel : ObservableObject
         Entries.Clear();
         foreach (var entry in source)
             Entries.Add(entry);
-
-        OnPropertyChanged(nameof(IsOtpRegistered));
     }
 
     /// <summary>
@@ -108,12 +91,6 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void NewEntry() => AddRequested?.Invoke(this, EventArgs.Empty);
 
-    [RelayCommand]
-    private void ChangeMasterPassword() => ChangeMasterRequested?.Invoke(this, EventArgs.Empty);
-
-    [RelayCommand]
-    private void SetupOtp() => OtpSetupRequested?.Invoke(this, EventArgs.Empty);
-
     [RelayCommand(CanExecute = nameof(CanActOn))]
     private void Reveal(VaultEntry? entry)
     {
@@ -134,21 +111,5 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _vault.Lock();
         Locked?.Invoke(this, EventArgs.Empty);
-    }
-
-    [RelayCommand]
-    private void Backup() => BackupRequested?.Invoke(this, EventArgs.Empty);
-
-    [RelayCommand]
-    private void Restore() => RestoreRequested?.Invoke(this, EventArgs.Empty);
-
-    /// <summary>선택한 경로로 볼트를 백업한다(뷰가 대화상자에서 경로를 받아 호출). M6.</summary>
-    public void PerformBackup(string path) => _vault.Backup(path);
-
-    /// <summary>백업 파일로 복원하고 잠금 화면으로 돌아간다(백업의 마스터 비번으로 재로그인). M6.</summary>
-    public void PerformRestore(string path)
-    {
-        _vault.Restore(path);                  // 세션 닫힘
-        Locked?.Invoke(this, EventArgs.Empty); // 언락 화면으로 전환
     }
 }

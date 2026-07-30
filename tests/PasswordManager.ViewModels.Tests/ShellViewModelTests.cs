@@ -226,76 +226,108 @@ public class ShellViewModelTests
         Assert.Equal(ShellState.Unlocking, shell.State);
     }
 
-    [Fact]
-    public async Task Change_master_request_opens_editor_and_success_returns_to_main()
+    /// <summary>열림 셸에서 설정 화면으로 이동해 SettingsViewModel을 반환한다.</summary>
+    private static SettingsViewModel GoToSettings(ShellViewModel shell)
     {
-        var (shell, main) = await OpenedShellAsync();
+        shell.ShowSettingsCommand.Execute(null);
+        return Assert.IsType<SettingsViewModel>(shell.CurrentViewModel);
+    }
 
-        main.ChangeMasterPasswordCommand.Execute(null);
+    [Fact]
+    public async Task Change_master_request_from_settings_success_returns_to_settings()
+    {
+        var (shell, _) = await OpenedShellAsync();
+        var settings = GoToSettings(shell);
+
+        settings.ChangeMasterPasswordCommand.Execute(null);
         var change = Assert.IsType<ChangeMasterPasswordViewModel>(shell.CurrentViewModel);
         change.CurrentPassword = Master;
         change.NewPassword = "new-master";
         change.ConfirmPassword = "new-master";
         await change.ChangeCommand.ExecuteAsync(null);
 
-        Assert.Same(main, shell.CurrentViewModel);
-        Assert.Equal(ShellState.Open, shell.State);
+        Assert.Same(settings, shell.CurrentViewModel); // 설정으로 복귀
+        Assert.Equal(ShellSection.Settings, shell.Section);
     }
 
     [Fact]
-    public async Task Cancel_change_master_returns_to_main()
+    public async Task Cancel_change_master_returns_to_settings()
     {
-        var (shell, main) = await OpenedShellAsync();
+        var (shell, _) = await OpenedShellAsync();
+        var settings = GoToSettings(shell);
 
-        main.ChangeMasterPasswordCommand.Execute(null);
+        settings.ChangeMasterPasswordCommand.Execute(null);
         var change = Assert.IsType<ChangeMasterPasswordViewModel>(shell.CurrentViewModel);
         change.CancelCommand.Execute(null);
 
-        Assert.Same(main, shell.CurrentViewModel);
+        Assert.Same(settings, shell.CurrentViewModel);
+    }
+
+    [Fact]
+    public async Task Settings_restore_locks_and_returns_to_unlock()
+    {
+        var (shell, _) = await OpenedShellAsync();
+        var settings = GoToSettings(shell);
+
+        settings.PerformBackup("backup.dat");
+        settings.PerformRestore("backup.dat");
+
+        Assert.Equal(ShellState.Unlocking, shell.State);
+        Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        Assert.False(shell.IsSidebarVisible);
     }
 
     // --- OTP 등록 마법사 / 열람 게이트 내비게이션 (design 5.4·7.4) ---
 
-    /// <summary>셸을 열고 OTP 등록 마법사를 통해 OTP를 등록한 뒤 메인으로 복귀한다.</summary>
+    /// <summary>셸을 열고 설정에서 OTP 등록 마법사로 OTP를 등록한 뒤 항목 화면으로 복귀한다.</summary>
     private static async Task<(ShellViewModel shell, MainViewModel main)> OpenedShellWithOtpAsync()
     {
         var (shell, main) = await OpenedShellAsync();
-        main.SetupOtpCommand.Execute(null);
+        var settings = GoToSettings(shell);
+        settings.SetupOtpCommand.Execute(null);
         var wizard = Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel);
         wizard.VerificationCode = TotpValidator.GenerateCode(wizard.Secret, DateTimeOffset.UtcNow);
         wizard.ConfirmCommand.Execute(null);
+        shell.ShowItemsCommand.Execute(null); // 열람 게이트 테스트를 위해 항목으로 복귀
         return (shell, main);
     }
 
     [Fact]
-    public async Task Otp_setup_request_opens_wizard()
+    public async Task Otp_setup_request_from_settings_opens_wizard()
     {
-        var (shell, main) = await OpenedShellAsync();
+        var (shell, _) = await OpenedShellAsync();
+        var settings = GoToSettings(shell);
 
-        main.SetupOtpCommand.Execute(null);
+        settings.SetupOtpCommand.Execute(null);
 
         Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel);
     }
 
     [Fact]
-    public async Task Otp_setup_complete_returns_to_main_and_marks_registered()
+    public async Task Otp_setup_complete_returns_to_settings_and_marks_registered()
     {
-        var (shell, main) = await OpenedShellWithOtpAsync();
+        var (shell, _) = await OpenedShellAsync();
+        var settings = GoToSettings(shell);
+        settings.SetupOtpCommand.Execute(null);
+        var wizard = Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel);
+        wizard.VerificationCode = TotpValidator.GenerateCode(wizard.Secret, DateTimeOffset.UtcNow);
+        wizard.ConfirmCommand.Execute(null);
 
-        Assert.Same(main, shell.CurrentViewModel);
-        Assert.True(main.IsOtpRegistered);
+        var returned = Assert.IsType<SettingsViewModel>(shell.CurrentViewModel); // 설정으로 복귀
+        Assert.True(returned.IsOtpRegistered);
     }
 
     [Fact]
-    public async Task Cancel_otp_setup_returns_to_main()
+    public async Task Cancel_otp_setup_returns_to_settings()
     {
-        var (shell, main) = await OpenedShellAsync();
-        main.SetupOtpCommand.Execute(null);
+        var (shell, _) = await OpenedShellAsync();
+        var settings = GoToSettings(shell);
+        settings.SetupOtpCommand.Execute(null);
         var wizard = Assert.IsType<OtpSetupViewModel>(shell.CurrentViewModel);
 
         wizard.CancelCommand.Execute(null);
 
-        Assert.Same(main, shell.CurrentViewModel);
+        Assert.Same(settings, shell.CurrentViewModel);
     }
 
     [Fact]

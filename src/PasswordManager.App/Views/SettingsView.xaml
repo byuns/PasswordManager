@@ -7,11 +7,70 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-    <StackPanel Margin="24">
-        <ui:TextBlock FontTypography="Title" Text="설정" Margin="0,0,0,16" />
-        <ui:TextBlock FontTypography="Body"
-                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                      Text="OTP·마스터 변경·자동잠금/클립보드 시간·백업/복원 설정이 이곳에 모입니다. (준비 중)"
-                      TextWrapping="Wrap" />
-    </StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,24,20,24">
+        <StackPanel>
+            <ui:TextBlock FontTypography="Title" Text="설정" Margin="0,0,0,20" />
+
+            <!-- 보안 -->
+            <ui:TextBlock FontTypography="BodyStrong" Text="보안"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="2,0,0,8" />
+
+            <ui:CardControl Icon="{ui:SymbolIcon ShieldKeyhole24}" Margin="0,0,0,8">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="2단계 인증(OTP)" />
+                        <ui:TextBlock FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding OtpStatusText, StringFormat='비밀번호 열람 보호 · 현재: {0}'}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:Button Content="등록/재설정" Command="{Binding SetupOtpCommand}" />
+            </ui:CardControl>
+
+            <ui:CardControl Icon="{ui:SymbolIcon Key24}" Margin="0,0,0,8">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="마스터 비밀번호" />
+                        <ui:TextBlock FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="볼트를 여는 마스터 비밀번호를 변경합니다." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:Button Content="변경" Command="{Binding ChangeMasterPasswordCommand}" />
+            </ui:CardControl>
+
+            <!-- 데이터 -->
+            <ui:TextBlock FontTypography="BodyStrong" Text="데이터"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="2,16,0,8" />
+
+            <ui:CardControl Icon="{ui:SymbolIcon Save24}" Margin="0,0,0,8">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="볼트 백업" />
+                        <ui:TextBlock FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="암호화된 볼트를 파일로 내보냅니다." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:Button Content="백업" Command="{Binding BackupCommand}" />
+            </ui:CardControl>
+
+            <ui:CardControl Icon="{ui:SymbolIcon ArrowImport24}" Margin="0,0,0,8">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="볼트 복원" />
+                        <ui:TextBlock FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="백업 파일로 현재 볼트를 덮어씁니다(복원 후 재로그인)." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:Button Content="복원" Appearance="Caution" Command="{Binding RestoreCommand}" />
+            </ui:CardControl>
+
+            <ui:TextBlock Margin="2,12,0,0"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Text="{Binding StatusMessage}" TextWrapping="Wrap"
+                          Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}" />
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>
