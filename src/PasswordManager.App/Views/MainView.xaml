@@ -21,6 +21,43 @@
                        Appearance="Primary" Margin="8,0,0,0" Command="{Binding NewEntryCommand}" />
         </Grid>
 
+        <!-- 태그 필터 칩 바 (TD-029: 여러 개 선택 시 OR). 태그가 있을 때만 표시 -->
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,16"
+              Visibility="{Binding AvailableTags.Count, Converter={StaticResource CountToVisibility}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ItemsControl Grid.Column="0" ItemsSource="{Binding AvailableTags}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ToggleButton Margin="0,0,6,6" Padding="10,2"
+                                      Command="{Binding DataContext.ToggleTagCommand,
+                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      CommandParameter="{Binding}">
+                            <ToggleButton.IsChecked>
+                                <MultiBinding Converter="{StaticResource TagSelected}" Mode="OneWay">
+                                    <Binding />
+                                    <Binding Path="DataContext.SelectedTags"
+                                             RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                </MultiBinding>
+                            </ToggleButton.IsChecked>
+                            <TextBlock Text="{Binding StringFormat='#{0}'}" />
+                        </ToggleButton>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ui:Button Grid.Column="1" Content="지우기" Icon="{ui:SymbolIcon Dismiss24}"
+                       Appearance="Secondary" Margin="8,0,0,0" VerticalAlignment="Top"
+                       Command="{Binding ClearTagsCommand}"
+                       Visibility="{Binding SelectedTags.Count, Converter={StaticResource CountToVisibility}}" />
+        </Grid>
+
         <!-- 상태 안내 (예: OTP 미등록 시 열람 안내) -->
         <ui:TextBlock DockPanel.Dock="Bottom" Margin="0,12,0,0"
                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"

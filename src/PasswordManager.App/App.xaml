@@ -21,6 +21,7 @@
             <conv:InitialConverter x:Key="Initial" />
             <conv:OtpAuthToQrConverter x:Key="OtpAuthToQr" />
             <conv:LimitTagsConverter x:Key="LimitTags" />
+            <conv:TagSelectedConverter x:Key="TagSelected" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
             <!-- ViewModel ↔ View 매핑 -->
