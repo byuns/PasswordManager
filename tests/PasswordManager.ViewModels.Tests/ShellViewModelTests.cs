@@ -500,6 +500,18 @@ public class ShellViewModelTests
     }
 
     [Fact]
+    public async Task Show_manual_navigates_to_manual_page()
+    {
+        var (shell, _) = await OpenedShellAsync();
+
+        shell.ShowManualCommand.Execute(null);
+
+        Assert.IsType<ManualViewModel>(shell.CurrentViewModel);
+        Assert.Equal(ShellSection.Manual, shell.Section);
+        Assert.True(shell.IsSidebarVisible);
+    }
+
+    [Fact]
     public async Task Show_info_exposes_injected_version_and_path()
     {
         var store = new InMemoryStore();

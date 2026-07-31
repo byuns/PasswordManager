@@ -16,14 +16,19 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="PasswordManager">
-            <!-- 세션 제어(잠금): 캡션 버튼 좌측, 열림 상태(최상위 페이지)에서만 노출 -->
-            <ui:TitleBar.TrailingContent>
-                <ui:Button Icon="{ui:SymbolIcon LockClosed24}" ToolTip="잠금"
-                           Appearance="Transparent" Padding="10,4" Margin="0,0,4,0"
-                           Command="{Binding LockCommand}"
-                           Visibility="{Binding IsSidebarVisible, Converter={StaticResource BoolToVisibility}}" />
-            </ui:TitleBar.TrailingContent>
+        <ui:TitleBar Grid.Row="0">
+            <!-- 세션 제어(잠금)를 헤더 최좌측으로: [잠금][제목] 순. 열림 상태(최상위 페이지)에서만 잠금 노출 -->
+            <ui:TitleBar.Header>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"
+                            Margin="12,0,0,0">
+                    <ui:Button Icon="{ui:SymbolIcon LockClosed24}" ToolTip="잠금"
+                               Appearance="Transparent" Padding="6,2" Margin="0,0,8,0" FontSize="13"
+                               Command="{Binding LockCommand}"
+                               Visibility="{Binding IsSidebarVisible, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="PasswordManager" VerticalAlignment="Center" FontSize="13"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                </StackPanel>
+            </ui:TitleBar.Header>
         </ui:TitleBar>
 
         <Grid Grid.Row="1">
@@ -40,13 +45,17 @@
                     Visibility="{Binding IsSidebarVisible, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel Margin="8">
                     <StackPanel>
-                        <ui:Button Content="항목" Icon="{ui:SymbolIcon Key24}"
+                        <ui:Button Content="계정" Icon="{ui:SymbolIcon Key24}"
                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                    Appearance="Transparent" Command="{Binding ShowItemsCommand}"
                                    Margin="0,0,0,4" />
                         <ui:Button Content="설정" Icon="{ui:SymbolIcon Settings24}"
                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                    Appearance="Transparent" Command="{Binding ShowSettingsCommand}"
+                                   Margin="0,0,0,4" />
+                        <ui:Button Content="메뉴얼" Icon="{ui:SymbolIcon BookQuestionMark24}"
+                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                   Appearance="Transparent" Command="{Binding ShowManualCommand}"
                                    Margin="0,0,0,4" />
                         <ui:Button Content="정보" Icon="{ui:SymbolIcon Info24}"
                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"

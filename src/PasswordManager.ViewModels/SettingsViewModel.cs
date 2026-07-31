@@ -211,7 +211,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public int PerformImport(string csv)
     {
         var count = _vault.ImportCsv(csv);
-        StatusMessage = $"{count}개 항목을 가져왔습니다.";
+        StatusMessage = $"{count}개 계정을 가져왔습니다.";
         return count;
     }
 

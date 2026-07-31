@@ -9,7 +9,8 @@
              mc:Ignorable="d">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="FormScroll">
     <Grid MinHeight="{Binding ViewportHeight, ElementName=FormScroll}">
-    <Border MaxWidth="560" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16"
+    <!-- 너비 고정: 입력한 비밀번호 길이에 따라 카드가 늘었다 줄었다 하지 않도록 Width를 못박는다. -->
+    <Border Width="440" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16"
             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
             BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}" Padding="40">

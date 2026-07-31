@@ -19,7 +19,11 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
                         <Border x:Name="Chip" Background="{TemplateBinding Background}"
-                                CornerRadius="14" Padding="{TemplateBinding Padding}">
+                                CornerRadius="14" Padding="{TemplateBinding Padding}"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="ChipScale" />
+                            </Border.RenderTransform>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -32,6 +36,29 @@
                                         Value="{DynamicResource AccentFillColorDefaultBrush}" />
                                 <Setter Property="Foreground"
                                         Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                            </Trigger>
+                            <!-- 누르는 순간 살짝 눌림(scale) → 떼면 복귀. 가벼운 촉감 피드백 -->
+                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ChipScale" Storyboard.TargetProperty="ScaleX"
+                                                             To="0.92" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="ChipScale" Storyboard.TargetProperty="ScaleY"
+                                                             To="0.92" Duration="0:0:0.08" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ChipScale" Storyboard.TargetProperty="ScaleX"
+                                                             To="1" Duration="0:0:0.12" />
+                                            <DoubleAnimation Storyboard.TargetName="ChipScale" Storyboard.TargetProperty="ScaleY"
+                                                             To="1" Duration="0:0:0.12" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -49,14 +76,15 @@
             <ui:TextBox Grid.Column="0" PlaceholderText="검색 (사이트·아이디)"
                         Icon="{ui:SymbolIcon Search24}"
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
-            <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Add24}" ToolTip="새 항목"
+            <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Add24}" ToolTip="새 계정"
                        Appearance="Primary" Width="36" Height="36" Padding="0"
                        CornerRadius="18" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                        Margin="8,0,0,0" Command="{Binding NewEntryCommand}" />
         </Grid>
 
         <!-- 태그 필터 칩 바 (TD-029: 여러 개 선택 시 OR). 태그가 있을 때만 표시 -->
-        <Grid DockPanel.Dock="Top" Margin="0,0,0,16"
+        <!-- 높이 고정: '지우기' 버튼(선택 시 등장)이 바를 키우지 않도록 칩 높이에 맞춰 Height를 못박는다. -->
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,16" Height="28"
               Visibility="{Binding AvailableTags.Count, Converter={StaticResource CountToVisibility}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -93,7 +121,8 @@
                 </ItemsControl>
             </ScrollViewer>
             <ui:Button Grid.Column="1" Content="지우기" Icon="{ui:SymbolIcon Dismiss24}"
-                       Appearance="Secondary" Margin="8,0,0,0" VerticalAlignment="Top"
+                       Appearance="Secondary" Margin="8,0,0,0" VerticalAlignment="Center"
+                       Height="28" Padding="10,0" FontSize="12"
                        Command="{Binding ClearTagsCommand}"
                        Visibility="{Binding SelectedTags.Count, Converter={StaticResource CountToVisibility}}" />
         </Grid>
@@ -104,8 +133,18 @@
                       Text="{Binding StatusMessage}" TextWrapping="Wrap"
                       Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}" />
 
-        <!-- 항목 카드 리스트 (design-ux §4) -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+        <!-- 계정 카드 리스트 (design-ux §4). 최초로 열릴 때만 목록 영역이 은은하게 fade-in(필터/검색 갱신엔 재생 안 됨). -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0" Opacity="0">
+            <ScrollViewer.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                             From="0" To="1" Duration="0:0:0.25" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </ScrollViewer.Triggers>
             <ItemsControl ItemsSource="{Binding Groups}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

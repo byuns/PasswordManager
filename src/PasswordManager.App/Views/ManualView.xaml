@@ -1,0 +1,138 @@
+<UserControl x:Class="PasswordManager.App.Views.ManualView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:PasswordManager.ViewModels;assembly=PasswordManager.ViewModels"
+             d:DataContext="{d:DesignInstance vm:ManualViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <!-- 아이콘 배지: 옅은 원형 배경 + 강조색 아이콘 -->
+        <Style x:Key="ManualBadge" TargetType="Border">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+            <Setter Property="Margin" Value="0,0,16,0" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style x:Key="ManualIcon" TargetType="ui:SymbolIcon">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="ManualRow" TargetType="Grid">
+            <Setter Property="Margin" Value="0,0,0,18" />
+        </Style>
+        <Style x:Key="ManualDesc" TargetType="ui:TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24" MaxWidth="640" HorizontalAlignment="Left">
+            <ui:TextBlock FontTypography="Title" Text="사용 안내" Margin="0,0,0,4" />
+            <ui:TextBlock Text="비밀번호 매니저를 이렇게 씁니다." Margin="0,0,0,20"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel>
+                    <Grid Style="{StaticResource ManualRow}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
+                            <ui:SymbolIcon Symbol="Key24" Style="{StaticResource ManualIcon}" />
+                        </Border>
+                        <StackPanel Grid.Column="1">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="계정 관리" />
+                            <ui:TextBlock Style="{StaticResource ManualDesc}"
+                                          Text="오른쪽 위 + 버튼으로 추가하고, 목록에서 계정을 눌러 편집·삭제합니다." />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Style="{StaticResource ManualRow}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
+                            <ui:SymbolIcon Symbol="Eye24" Style="{StaticResource ManualIcon}" />
+                        </Border>
+                        <StackPanel Grid.Column="1">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="비밀번호 보기" />
+                            <ui:TextBlock Style="{StaticResource ManualDesc}"
+                                          Text="열람·편집할 때 OTP(또는 마스터 비밀번호) 인증을 거쳐 안전하게 표시합니다." />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Style="{StaticResource ManualRow}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
+                            <ui:SymbolIcon Symbol="Tag24" Style="{StaticResource ManualIcon}" />
+                        </Border>
+                        <StackPanel Grid.Column="1">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="태그 필터" />
+                            <ui:TextBlock Style="{StaticResource ManualDesc}"
+                                          Text="상단 태그 칩으로 원하는 계정만 추립니다. 여러 개를 켜면 하나라도 맞는 계정을 보여줍니다." />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Style="{StaticResource ManualRow}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
+                            <ui:SymbolIcon Symbol="LockClosed24" Style="{StaticResource ManualIcon}" />
+                        </Border>
+                        <StackPanel Grid.Column="1">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="잠금" />
+                            <ui:TextBlock Style="{StaticResource ManualDesc}"
+                                          Text="왼쪽 위 잠금 버튼으로 즉시 잠그고, 일정 시간 쓰지 않으면 자동으로 잠깁니다." />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Style="{StaticResource ManualRow}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
+                            <ui:SymbolIcon Symbol="Settings24" Style="{StaticResource ManualIcon}" />
+                        </Border>
+                        <StackPanel Grid.Column="1">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="설정" />
+                            <ui:TextBlock Style="{StaticResource ManualDesc}"
+                                          Text="자동 잠금 시간, 클립보드 자동 삭제, 슬랙 알림 등을 조정합니다." />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 마지막 항목: 아래 여백 제거 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
+                            <ui:SymbolIcon Symbol="ShieldKeyhole24" Style="{StaticResource ManualIcon}" />
+                        </Border>
+                        <StackPanel Grid.Column="1">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="복구 키" />
+                            <ui:TextBlock Style="{StaticResource ManualDesc}"
+                                          Text="마스터 비밀번호를 잊으면 복구 키로만 되살릴 수 있습니다. 안전한 곳에 따로 보관하세요." />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

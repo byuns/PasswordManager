@@ -28,6 +28,8 @@ public enum ShellSection
     Settings,
     /// <summary>정보.</summary>
     Info,
+    /// <summary>사용 안내(메뉴얼).</summary>
+    Manual,
 }
 
 /// <summary>
@@ -48,6 +50,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private MainViewModel? _main;
     private SettingsViewModel? _settings;
     private InfoViewModel? _info;
+    private ManualViewModel? _manual;
 
     /// <summary>OTP 등록 화면을 메인(항목 목록)에서 열었는지. true면 완료·취소 후 메인으로, 아니면 설정으로 복귀.</summary>
     private bool _otpSetupFromMain;
@@ -231,6 +234,15 @@ public sealed partial class ShellViewModel : ObservableObject
         _info ??= new InfoViewModel(version: _appVersion, vaultPath: _vaultPath);
         CurrentViewModel = _info;
         Section = ShellSection.Info;
+    }
+
+    /// <summary>사용 안내(메뉴얼) 섹션으로 이동한다.</summary>
+    [RelayCommand]
+    private void ShowManual()
+    {
+        _manual ??= new ManualViewModel();
+        CurrentViewModel = _manual;
+        Section = ShellSection.Manual;
     }
 
     /// <summary>사이드바 잠금 버튼. 열려 있을 때만 볼트를 잠그고 언락 화면으로 돌아간다.</summary>

@@ -199,7 +199,7 @@
                         <ui:TextBlock FontTypography="BodyStrong" Text="CSV 가져오기" />
                         <ui:TextBlock FontTypography="Caption"
                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                      Text="CSV 파일의 항목을 모두 새 항목으로 추가합니다." />
+                                      Text="CSV 파일의 계정을 모두 새 계정으로 추가합니다." />
                     </StackPanel>
                 </ui:CardControl.Header>
                 <ui:Button Content="가져오기" Command="{Binding ImportCommand}" />

@@ -54,6 +54,9 @@
             <DataTemplate DataType="{x:Type vm:InfoViewModel}">
                 <views:InfoView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ManualViewModel}">
+                <views:ManualView />
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:EntryEditViewModel}">
                 <views:EntryEditView />
             </DataTemplate>

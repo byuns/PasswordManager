@@ -192,12 +192,12 @@ public sealed partial class MainViewModel : ObservableObject
         if (target is null) return;
         // 실수 방지: 다이얼로그가 있으면 삭제 전 확인을 받는다(취소 시 아무것도 안 함).
         if (_dialog is not null && !await _dialog.ConfirmAsync(
-                "삭제 확인", $"‘{target.Title}’ 항목을 삭제할까요?\n삭제하면 되돌릴 수 없습니다.", "삭제", "취소"))
+                "삭제 확인", $"‘{target.Title}’ 계정을 삭제할까요?\n삭제하면 되돌릴 수 없습니다.", "삭제", "취소"))
             return;
         _vault.Remove(target.Id);
         if (ReferenceEquals(target, SelectedEntry)) SelectedEntry = null;
         Refresh();
-        _dialog?.Notify("삭제됨", "항목을 삭제했습니다.");
+        _dialog?.Notify("삭제됨", "계정을 삭제했습니다.");
     }
 
     [RelayCommand(CanExecute = nameof(CanActOn))]
