@@ -561,4 +561,79 @@ public class ShellViewModelTests
         Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
         Assert.False(shell.IsSidebarVisible);
     }
+
+    // --- 슬랙 알림 이벤트 배선 (M6 S4, design 7.8) ---
+    // 게이트(전역·활성·토글)는 SlackNotifierTests가 검증하므로, 여기선 셸이 올바른 이벤트를 "부르는지"만 본다.
+
+    private sealed class FakeNotifier : PasswordManager.Core.Notifications.ISlackNotifier
+    {
+        public List<PasswordManager.Core.Notifications.SlackEvent> Events { get; } = new();
+        public List<string?> SiteNames { get; } = new();
+
+        public Task NotifyAsync(PasswordManager.Core.Notifications.SlackEvent kind, DateTimeOffset time,
+            string? siteName = null, CancellationToken ct = default)
+        {
+            Events.Add(kind);
+            SiteNames.Add(siteName);
+            return Task.CompletedTask;
+        }
+    }
+
+    private static ShellViewModel ShellWithNotifier(InMemoryStore store, FakeNotifier notifier)
+        => new(new VaultManager(store, Path), Light,
+               slack: notifier, slackCache: new PasswordManager.Core.Notifications.SlackConfigCache());
+
+    [Fact]
+    public async Task Successful_unlock_notifies_slack_unlock()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        var notifier = new FakeNotifier();
+        var shell = ShellWithNotifier(store, notifier);
+
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.Password = Master;
+        await unlock.UnlockCommand.ExecuteAsync(null);
+
+        Assert.Contains(PasswordManager.Core.Notifications.SlackEvent.Unlock, notifier.Events);
+    }
+
+    [Fact]
+    public async Task Wrong_password_notifies_slack_login_failure()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        var notifier = new FakeNotifier();
+        var shell = ShellWithNotifier(store, notifier);
+
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.Password = "wrong";
+        await unlock.UnlockCommand.ExecuteAsync(null);
+
+        Assert.Contains(PasswordManager.Core.Notifications.SlackEvent.LoginFailure, notifier.Events);
+    }
+
+    [Fact]
+    public async Task Saving_entry_with_new_password_notifies_slack_password_change_with_title()
+    {
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+        var notifier = new FakeNotifier();
+        var shell = ShellWithNotifier(store, notifier);
+
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+        unlock.Password = Master;
+        await unlock.UnlockCommand.ExecuteAsync(null);
+        var main = Assert.IsType<MainViewModel>(shell.CurrentViewModel);
+
+        main.NewEntryCommand.Execute(null);
+        var editor = Assert.IsType<EntryEditViewModel>(shell.CurrentViewModel);
+        editor.Title = "Steam";
+        editor.Login = "gamer";
+        editor.Password = "pw";
+        editor.SaveCommand.Execute(null);
+
+        Assert.Contains(PasswordManager.Core.Notifications.SlackEvent.PasswordChange, notifier.Events);
+        Assert.Contains("Steam", notifier.SiteNames);
+    }
 }

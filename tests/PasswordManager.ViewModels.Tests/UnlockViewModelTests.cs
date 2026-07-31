@@ -39,6 +39,30 @@ public class UnlockViewModelTests
     }
 
     [Fact]
+    public async Task Wrong_password_raises_LoginFailed()
+    {
+        var vm = new UnlockViewModel(ManagerWithExistingVault()) { Password = "wrong" };
+        var failed = false;
+        vm.LoginFailed += (_, _) => failed = true;
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.True(failed);
+    }
+
+    [Fact]
+    public async Task Correct_password_does_not_raise_LoginFailed()
+    {
+        var vm = new UnlockViewModel(ManagerWithExistingVault()) { Password = Master };
+        var failed = false;
+        vm.LoginFailed += (_, _) => failed = true;
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.False(failed);
+    }
+
+    [Fact]
     public async Task Unlock_with_correct_password_raises_Unlocked_and_opens_session()
     {
         var manager = ManagerWithExistingVault();

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using PasswordManager.App.Services;
+using PasswordManager.Core.Notifications;
 using PasswordManager.Core.Vault;
 using PasswordManager.Storage;
 using PasswordManager.ViewModels;
@@ -53,8 +54,14 @@ public partial class App : Application
             DevSeed.Populate(manager);
         var clipboard = new ClipboardCopier(new WpfClipboardService(), new DispatcherScheduler());
         var throttle = new LoginThrottle(FileLockoutStore.ForVault(vaultPath));
+
+        // 슬랙 알림(옵트인·기본 OFF): 세션 캐시(A안) + HTTPS 전송기. 설정을 켜기 전엔 어떤 통신도 없음.
+        var slackCache = new SlackConfigCache();
+        var slack = new SlackNotifier(() => slackCache.Current, new HttpWebhookClient());
+
         var shell = new ShellViewModel(manager, clipboard: clipboard,
-            appVersion: GetAppVersion(), vaultPath: vaultPath, throttle: throttle);
+            appVersion: GetAppVersion(), vaultPath: vaultPath, throttle: throttle,
+            slack: slack, slackCache: slackCache);
 
         new ShellWindow { DataContext = shell }.Show();
     }

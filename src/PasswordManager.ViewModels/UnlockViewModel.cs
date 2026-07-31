@@ -38,6 +38,9 @@ public sealed partial class UnlockViewModel : ObservableObject
     /// <summary>언락 성공 시 발생. 셸이 구독해 메인 화면으로 전환한다.</summary>
     public event EventHandler? Unlocked;
 
+    /// <summary>마스터 비밀번호가 틀려 언락에 실패했을 때 발생(파일 손상·재시도 잠금은 제외). 셸이 슬랙 알림에 쓴다(design 7.8).</summary>
+    public event EventHandler? LoginFailed;
+
     /// <summary>"비밀번호를 잊으셨나요?" 요청. 셸이 복구 화면으로 전환한다(design 5.7).</summary>
     public event EventHandler? RecoveryRequested;
 
@@ -88,6 +91,7 @@ public sealed partial class UnlockViewModel : ObservableObject
             ErrorMessage = imposed is { } locked
                 ? $"마스터 비밀번호를 여러 번 틀렸습니다. {FormatDuration(locked)} 동안 잠깁니다."
                 : "마스터 비밀번호가 올바르지 않습니다.";
+            LoginFailed?.Invoke(this, EventArgs.Empty);
         }
         catch (VaultCorruptedException)
         {

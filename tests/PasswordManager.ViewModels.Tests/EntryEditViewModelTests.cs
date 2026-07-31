@@ -36,6 +36,43 @@ public class EntryEditViewModelTests
     }
 
     [Fact]
+    public void New_entry_save_flags_password_changed()
+    {
+        var vm = new EntryEditViewModel(Unlocked())
+        {
+            Title = "Steam", Login = "gamer", Password = "pw",
+        };
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.True(vm.LastSaveChangedPassword); // 신규는 비번 추가로 간주
+    }
+
+    [Fact]
+    public void Edit_changing_password_flags_password_changed()
+    {
+        var vault = Unlocked();
+        vault.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "old" });
+        var vm = new EntryEditViewModel(vault, vault.Entries[0]) { Password = "new" };
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.True(vm.LastSaveChangedPassword);
+    }
+
+    [Fact]
+    public void Edit_without_password_change_does_not_flag()
+    {
+        var vault = Unlocked();
+        vault.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "keep" });
+        var vm = new EntryEditViewModel(vault, vault.Entries[0]) { Notes = "메모만 변경" };
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.False(vm.LastSaveChangedPassword); // 비번은 그대로
+    }
+
+    [Fact]
     public void Save_requires_title_login_and_password()
     {
         var vm = new EntryEditViewModel(Unlocked());

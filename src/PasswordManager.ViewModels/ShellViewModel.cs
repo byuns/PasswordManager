@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PasswordManager.Core.Models;
+using PasswordManager.Core.Notifications;
 using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
 using PasswordManager.ViewModels.Services;
@@ -42,6 +43,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly LoginThrottle? _throttle;
     private readonly string? _appVersion;
     private readonly string? _vaultPath;
+    private readonly ISlackNotifier? _slack;       // 슬랙 알림 조율기(옵션, 없으면 알림 미동작)
+    private readonly SlackConfigCache? _slackCache; // 로그인 실패 알림용 세션 캐시(A안)
     private MainViewModel? _main;
     private SettingsViewModel? _settings;
     private InfoViewModel? _info;
@@ -76,7 +79,8 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSidebarVisible));
 
     public ShellViewModel(VaultManager vault, KdfParams? kdf = null, ClipboardCopier? clipboard = null,
-        string? appVersion = null, string? vaultPath = null, LoginThrottle? throttle = null)
+        string? appVersion = null, string? vaultPath = null, LoginThrottle? throttle = null,
+        ISlackNotifier? slack = null, SlackConfigCache? slackCache = null)
     {
         _vault = vault;
         _kdf = kdf ?? KdfParams.Recommended;
@@ -84,6 +88,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _throttle = throttle;
         _appVersion = appVersion;
         _vaultPath = vaultPath;
+        _slack = slack;
+        _slackCache = slackCache;
 
         if (_vault.Exists())
             StartUnlock();
@@ -95,10 +101,28 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         var vm = new UnlockViewModel(_vault, _throttle);
         vm.Unlocked += OnVaultOpened;
+        vm.LoginFailed += OnLoginFailed;
         vm.RecoveryRequested += OnRecoveryRequested;
         CurrentViewModel = vm;
         Section = null;
         State = ShellState.Unlocking;
+    }
+
+    /// <summary>마스터 비번 로그인 실패 → 세션 캐시(A안)의 마지막 설정으로 슬랙 알림(design 7.8).</summary>
+    private void OnLoginFailed(object? sender, EventArgs e) => FireSlack(SlackEvent.LoginFailure);
+
+    /// <summary>잠금 해제·설정 저장 시 슬랙 설정 스냅샷을 세션 캐시에 갱신한다(로그인 실패 알림용).</summary>
+    public void RefreshSlackConfig()
+    {
+        if (_slackCache is null || !_vault.IsUnlocked) return;
+        _slackCache.Update(new SlackConfig(_vault.NetworkAllowed, _vault.Slack));
+    }
+
+    /// <summary>슬랙 알림을 베스트에포트로 쏜다(실패·미설정이어도 앱 흐름을 막지 않음).</summary>
+    private void FireSlack(SlackEvent kind, string? siteName = null)
+    {
+        if (_slack is null) return;
+        _ = _slack.NotifyAsync(kind, DateTimeOffset.Now, siteName);
     }
 
     private void OnRecoveryRequested(object? sender, EventArgs e)
@@ -127,6 +151,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private void OnVaultOpened(object? sender, EventArgs e)
     {
         ApplyClipboardDelay();
+        RefreshSlackConfig();          // 세션 캐시에 설정 반영(이후 로그인 실패 알림용)
+        FireSlack(SlackEvent.Unlock);  // 잠금 해제 성공 알림(design 7.8)
         ShowMain();
         State = ShellState.Open;
     }
@@ -351,6 +377,10 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnEditorSaved(object? sender, EventArgs e)
     {
+        // 비밀번호를 새로 추가·변경한 저장만 슬랙에 알린다(메타데이터만 바뀐 저장은 제외, design 7.8).
+        if (sender is EntryEditViewModel editor && editor.LastSaveChangedPassword)
+            FireSlack(SlackEvent.PasswordChange, editor.Title);
+
         DetachEditor(sender);
         ShowMain();
         Dialog?.Notify("저장됨", "변경 내용을 저장했습니다.");

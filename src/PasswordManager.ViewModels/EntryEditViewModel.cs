@@ -65,6 +65,9 @@ public sealed partial class EntryEditViewModel : ObservableObject
     /// <summary>편집 취소 시 발생.</summary>
     public event EventHandler? Cancelled;
 
+    /// <summary>직전 저장이 비밀번호를 새로 추가하거나 바꿨는지(슬랙 "비밀번호 변경" 알림 판정용, design 7.8).</summary>
+    public bool LastSaveChangedPassword { get; private set; }
+
     // 사이트명·아이디·비밀번호는 필수. 셋 다 채워야 저장할 수 있다.
     private bool CanSave() =>
         !string.IsNullOrWhiteSpace(Title) &&
@@ -76,6 +79,9 @@ public sealed partial class EntryEditViewModel : ObservableObject
     {
         // 입력창에 아직 확정 안 한 태그가 남아 있으면 저장 시 함께 반영한다.
         if (!string.IsNullOrWhiteSpace(TagInput)) AddTag();
+
+        // 신규 항목이거나 기존 비번과 다르면 비밀번호 추가·변경으로 본다(메타데이터만 바뀐 저장은 제외).
+        LastSaveChangedPassword = _original is null || Password != _original.Password;
 
         if (_original is null)
         {
