@@ -10,19 +10,12 @@
         - 여기서는 여백 스케일과 카드 형태만 정의한다.
     -->
 
-    <!-- 여백 스케일 (px): 4 · 8 · 12 · 16 · 24 -->
-    <sys:Double x:Key="SpacingXS">4</sys:Double>
-    <sys:Double x:Key="SpacingS">8</sys:Double>
-    <sys:Double x:Key="SpacingM">12</sys:Double>
-    <sys:Double x:Key="SpacingL">16</sys:Double>
-    <sys:Double x:Key="SpacingXL">24</sys:Double>
-
-    <!-- Margin/Padding용 균일 Thickness (위 스케일과 동일 값) -->
-    <Thickness x:Key="ThicknessXS">4</Thickness>
-    <Thickness x:Key="ThicknessS">8</Thickness>
-    <Thickness x:Key="ThicknessM">12</Thickness>
+    <!--
+        여백 스케일(4 · 8 · 12 · 16 · 24)은 숫자 규약으로만 지킨다 — 리소스로 두지 않는다.
+        실제 여백은 대부분 방향성(예: Margin="0,0,0,8")이라 균일 Thickness 토큰이 들어갈
+        자리가 없었다. 사방 균일 16이 필요한 화면 바깥 여백만 ThicknessL로 남긴다.
+    -->
     <Thickness x:Key="ThicknessL">16</Thickness>
-    <Thickness x:Key="ThicknessXL">24</Thickness>
 
     <!-- 카드 형태 -->
     <CornerRadius x:Key="CardCornerRadius">8</CornerRadius>

@@ -76,7 +76,9 @@
 
 ## 5. 디자인 토큰
 
-- **여백 스케일**: 4 · 8 · 12 · 16 · 24 (px).
+- **여백 스케일**: 4 · 8 · 12 · 16 · 24 (px). **숫자 규약이지 리소스가 아니다** —
+  실제 여백은 대부분 방향성(`Margin="0,0,0,8"`)이라 균일 `Thickness` 토큰이 안 맞아,
+  화면 바깥 여백용 `ThicknessL`(16) 하나만 리소스로 둔다.
 - **타이포**: WPF-UI `TextBlock` FontTypography (Title / Subtitle / Body / Caption).
 - **카드**: 모서리 반경 8, 은은한 테두리(`CardBackground`/`ControlStroke`), 호버 강조.
 - **색**: 배경/표면/텍스트는 WPF-UI Dark 토큰(`ApplicationBackground`, `CardBackground`,
