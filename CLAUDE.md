@@ -42,3 +42,16 @@
   - `chore`: 빌드·설정·잡무
   - `style`: 포맷팅(로직 변경 없음)
   - `perf`: 성능 개선
+
+## 실행·검증 워크플로
+- **역할 분담**: UI/동작 변경 후 확인이 필요하면 **Claude는 빌드·실행까지만** 하고, **눈으로 보는 확인(스크린샷 포함)은 사용자가** 한다. Claude는 **스크린샷을 찍지 않는다**.
+- 실행한 뒤에는 **"무엇을 어떻게 바꿨는지"를 사용자에게 다시 정리·확인**받는다. (예: "사이드 메뉴 테두리·호버 배경 제거, 호버 시 글자색만 변경 — 이렇게 반영했습니다. 맞나요?")
+- 앱 실행 명령(개발용 시드 볼트로 사이드바 등 메인 화면 확인):
+  ```powershell
+  $env:PWM_VAULT_PATH = "$env:TEMP\pwm-seed\vault.dat"   # 임시 볼트(실제 볼트와 분리)
+  $env:PWM_SEED = "1"                                      # 볼트 없을 때만 더미 데이터 시드
+  & "C:\Program Files\dotnet\dotnet.exe" run --project src\PasswordManager.App
+  ```
+  - 시드 볼트 마스터 비밀번호: `seedtestvault-2026` (`DevSeed.cs`). 잠금 해제 후에만 사이드바가 보인다.
+  - 다시 시드하려면 `$env:PWM_VAULT_PATH` 폴더의 볼트 파일을 지운 뒤 실행한다.
+- **환경 메모**: 이 PC엔 `dotnet`이 PATH에 없을 수 있다. 전체 경로 `C:\Program Files\dotnet\dotnet.exe`를 쓴다. (.NET 8 SDK 사용)
