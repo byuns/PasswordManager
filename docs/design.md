@@ -261,15 +261,19 @@ UI에는 필요한 순간에만 전달하며 사용 후 즉시 폐기한다.
 
 ```jsonc
 {
-  "version": 1,
-  "appOtp": { "secret": "…(암호화)…" },     // 앱 잠금해제용 2FA
-  "network": { "offline": true },           // 전역 오프라인 스위치 (기본 차단) — TD-013
-  "slackNotify": {                          // 슬랙 알림 (옵트인, 기본 OFF) — TD-012
+  "version": 2,                             // M6 슬랙·네트워크 필드 도입으로 v2 (v1은 자동 마이그레이션)
+  "appTotpSecret": "…(암호화)…",            // 앱 잠금해제용 2FA (미등록이면 생략)
+  "networkAllowed": false,                  // 전역 오프라인 스위치 (기본 차단=false) — TD-013
+  "slack": {                                // 슬랙 알림 (옵트인, 기본 OFF) — TD-012
     "enabled": false,
     "webhookUrl": "…(암호화)…",
-    "events": { "unlock": true, "loginFail": true, "pwChange": true },
+    "notifyUnlock": true,                   // 잠금 해제 성공
+    "notifyLoginFailure": true,             // 로그인 실패
+    "notifyPasswordChange": true,           // 비번 추가·변경
+    "notifySensitive": false,               // (선택) 마스터 변경·복구 키 사용
     "includeSiteName": false,               // 사이트명 노출 기본 OFF
-    "template": "🔓 {이벤트} · {시각}"        // 변수 템플릿 (허용 변수만 치환) — TD-014
+    "messageTemplate": "🔓 {이벤트} · {시각}", // 변수 템플릿 (허용 변수만 치환) — TD-014
+    "deviceName": null                      // {기기명} 변수용 (선택)
   },
   "entries": [
     {

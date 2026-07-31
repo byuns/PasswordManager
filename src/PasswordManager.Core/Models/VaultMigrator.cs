@@ -17,9 +17,13 @@ public sealed class VaultVersionException(int fileVersion, int supportedVersion)
 /// </summary>
 public static class VaultMigrator
 {
-    // key = from 버전, 값 = 그 버전을 (from+1)로 올리는 변환. 현재 최신이 v1이라 등록된 단계 없음.
-    // v2 도입 시: Steps[1] = root => { ...구조 변경...; return root; }
-    private static readonly Dictionary<int, Func<JsonObject, JsonObject>> Steps = new();
+    // key = from 버전, 값 = 그 버전을 (from+1)로 올리는 변환.
+    private static readonly Dictionary<int, Func<JsonObject, JsonObject>> Steps = new()
+    {
+        // v1 → v2 (M6 슬랙): NetworkAllowed·Slack은 순수 추가 필드라 구조 변환이 필요 없다.
+        // 없는 필드는 역직렬화 기본값(NetworkAllowed=false, Slack=기본 OFF)이 흡수하므로 그대로 통과시킨다.
+        [1] = root => root,
+    };
 
     /// <summary>root JSON을 <see cref="VaultData.CurrentVersion"/>까지 순차 변환하고 version을 정규화한다.</summary>
     public static JsonObject Migrate(JsonObject root)

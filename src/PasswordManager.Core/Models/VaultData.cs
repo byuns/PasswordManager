@@ -4,7 +4,7 @@ namespace PasswordManager.Core.Models;
 public sealed class VaultData
 {
     /// <summary>현재 앱이 쓰는 볼트 스키마 버전. 구조 변경 시 올리고 <see cref="VaultMigrator"/>에 변환 단계를 추가한다(TD-008).</summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public int Version { get; set; } = CurrentVersion;
     public List<VaultEntry> Entries { get; set; } = new();
@@ -17,6 +17,49 @@ public sealed class VaultData
 
     /// <summary>비밀번호 복사 후 클립보드 자동 삭제까지의 초(design 5.5). 기본 20초.</summary>
     public int ClipboardClearSeconds { get; set; } = 20;
+
+    /// <summary>
+    /// 전역 오프라인 스위치(TD-013). 기본 false = 아웃바운드 전면 차단. 슬랙은 이 스위치의 하위라,
+    /// false면 슬랙 설정이 켜져 있어도 어떤 통신도 나가지 않는다. 구버전(v1) 볼트는 기본값 false 유지.
+    /// </summary>
+    public bool NetworkAllowed { get; set; }
+
+    /// <summary>슬랙 알림 설정(옵트인·기본 OFF, TD-012). 구버전 볼트엔 없으므로 기본 인스턴스가 유지된다.</summary>
+    public SlackSettings Slack { get; set; } = new();
+}
+
+/// <summary>슬랙 Incoming Webhook 알림 설정. secret(WebhookUrl)은 볼트 본문의 일부라 함께 암호화 저장된다. design 7.8·TD-012·TD-014.</summary>
+public sealed class SlackSettings
+{
+    /// <summary>슬랙 알림 옵트인 여부(기본 OFF). 전역 <see cref="VaultData.NetworkAllowed"/>가 true여야 실제 동작.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Slack Incoming Webhook URL. 볼트 안에 암호화 저장(다른 secret과 동일 취급).</summary>
+    public string WebhookUrl { get; set; } = "";
+
+    /// <summary>잠금 해제 성공 시 알림.</summary>
+    public bool NotifyUnlock { get; set; } = true;
+
+    /// <summary>마스터 비밀번호 로그인 실패 시 알림.</summary>
+    public bool NotifyLoginFailure { get; set; } = true;
+
+    /// <summary>비밀번호 추가·변경 시 알림.</summary>
+    public bool NotifyPasswordChange { get; set; } = true;
+
+    /// <summary>(선택) 마스터 비번 변경·복구 키 사용 등 민감 이벤트 알림(기본 OFF).</summary>
+    public bool NotifySensitive { get; set; }
+
+    /// <summary>사이트명 포함 여부. 기본 미포함(어떤 서비스를 쓰는지 노출 방지, design 7.8).</summary>
+    public bool IncludeSiteName { get; set; }
+
+    /// <summary>알림 메시지 템플릿. 허용 변수만 치환(TD-014). 기본값은 <see cref="DefaultTemplate"/>.</summary>
+    public string MessageTemplate { get; set; } = DefaultTemplate;
+
+    /// <summary>{기기명} 변수용 표시 이름(선택). null이면 빈 문자열로 치환.</summary>
+    public string? DeviceName { get; set; }
+
+    /// <summary>기본 메시지 템플릿(기본 복원 버튼용, design 7.8).</summary>
+    public const string DefaultTemplate = "🔓 {이벤트} · {시각}";
 }
 
 /// <summary>계정 항목 하나. 같은 사이트의 여러 계정은 각각 독립 Entry. design 6.</summary>

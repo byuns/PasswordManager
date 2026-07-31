@@ -27,12 +27,12 @@ public class VaultDataTests
     [Fact]
     public void Roundtrip_preserves_all_fields()
     {
-        var data = new VaultData { Version = 1, Entries = { SampleEntry() } };
+        var data = new VaultData { Version = VaultData.CurrentVersion, Entries = { SampleEntry() } };
 
         var json = VaultJson.Serialize(data);
         var back = VaultJson.Deserialize(json);
 
-        Assert.Equal(1, back.Version);
+        Assert.Equal(VaultData.CurrentVersion, back.Version);
         var e = Assert.Single(back.Entries);
         var o = data.Entries[0];
         Assert.Equal(o.Id, e.Id);

@@ -267,6 +267,21 @@ public sealed class VaultManager
         Persist();
     }
 
+    /// <summary>전역 오프라인 스위치 상태(기본 false=차단, TD-013).</summary>
+    public bool NetworkAllowed => RequireUnlocked().NetworkAllowed;
+
+    /// <summary>슬랙 알림 설정 스냅샷(design 7.8·TD-012). 변경은 <see cref="SaveNetworkSettings"/>로 저장한다.</summary>
+    public SlackSettings Slack => RequireUnlocked().Slack;
+
+    /// <summary>전역 오프라인 스위치와 슬랙 설정을 저장한다(design 7.8·7.9). null slack이면 기존 설정 유지.</summary>
+    public void SaveNetworkSettings(bool networkAllowed, SlackSettings? slack = null)
+    {
+        var data = RequireUnlocked();
+        data.NetworkAllowed = networkAllowed;
+        if (slack is not null) data.Slack = slack;
+        Persist();
+    }
+
     /// <summary>현재 항목들을 자체 CSV(평문)로 내보낸다. 호출부가 강한 경고를 거쳐야 한다(design 7.7).</summary>
     public string ExportCsv() => CsvVault.Export(RequireUnlocked().Entries);
 

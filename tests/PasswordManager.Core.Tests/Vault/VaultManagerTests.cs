@@ -455,4 +455,51 @@ public class VaultManagerTests
 
         Assert.Throws<InvalidMasterPasswordException>(() => m.ReissueRecoveryKey("wrong"));
     }
+
+    // --- 네트워크·슬랙 설정 (M6, design 7.8) ---
+
+    [Fact]
+    public void New_vault_defaults_to_offline_and_slack_off()
+    {
+        var m = new VaultManager(new InMemoryStore(), Path, Light);
+        m.CreateNew(Master, Light);
+
+        Assert.False(m.NetworkAllowed);
+        Assert.False(m.Slack.Enabled);
+    }
+
+    [Fact]
+    public void SaveNetworkSettings_persists_across_reopen()
+    {
+        var store = new InMemoryStore();
+        var m1 = new VaultManager(store, Path, Light);
+        m1.CreateNew(Master, Light);
+        m1.SaveNetworkSettings(networkAllowed: true, new SlackSettings
+        {
+            Enabled = true,
+            WebhookUrl = "https://hooks.slack.com/services/x",
+        });
+
+        var m2 = new VaultManager(store, Path, Light);
+        m2.Open(Master);
+
+        Assert.True(m2.NetworkAllowed);
+        Assert.True(m2.Slack.Enabled);
+        Assert.Equal("https://hooks.slack.com/services/x", m2.Slack.WebhookUrl);
+    }
+
+    [Fact]
+    public void SaveNetworkSettings_without_slack_keeps_existing_slack()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path, Light);
+        m.CreateNew(Master, Light);
+        m.SaveNetworkSettings(true, new SlackSettings { Enabled = true, WebhookUrl = "u" });
+
+        m.SaveNetworkSettings(false); // 전역만 끄고 슬랙 설정은 유지
+
+        Assert.False(m.NetworkAllowed);
+        Assert.True(m.Slack.Enabled);
+        Assert.Equal("u", m.Slack.WebhookUrl);
+    }
 }
