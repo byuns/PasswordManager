@@ -16,7 +16,15 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="PasswordManager" />
+        <ui:TitleBar Grid.Row="0" Title="PasswordManager">
+            <!-- 세션 제어(잠금): 캡션 버튼 좌측, 열림 상태(최상위 페이지)에서만 노출 -->
+            <ui:TitleBar.TrailingContent>
+                <ui:Button Icon="{ui:SymbolIcon LockClosed24}" ToolTip="잠금"
+                           Appearance="Transparent" Padding="10,4" Margin="0,0,4,0"
+                           Command="{Binding LockCommand}"
+                           Visibility="{Binding IsSidebarVisible, Converter={StaticResource BoolToVisibility}}" />
+            </ui:TitleBar.TrailingContent>
+        </ui:TitleBar>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -31,10 +39,6 @@
                     BorderThickness="0,0,1,0"
                     Visibility="{Binding IsSidebarVisible, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel Margin="8">
-                    <ui:Button DockPanel.Dock="Bottom" Icon="{ui:SymbolIcon LockClosed24}"
-                               Appearance="Transparent" ToolTip="잠금"
-                               HorizontalAlignment="Left" HorizontalContentAlignment="Center"
-                               Command="{Binding LockCommand}" Margin="0,4,0,0" />
                     <StackPanel>
                         <ui:Button Content="항목" Icon="{ui:SymbolIcon Key24}"
                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
@@ -52,6 +56,33 @@
             </Border>
 
             <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" />
+        </Grid>
+
+        <!-- 완료 토스트 호스트: 본문 위에 겹쳐 그린다(코드 비하인드가 서비스에 연결). -->
+        <ui:SnackbarPresenter x:Name="RootSnackbar" Grid.Row="0" Grid.RowSpan="2"
+                              MaxWidth="420" Margin="0,0,0,32"
+                              HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+
+        <!-- 삭제 등 확인 오버레이: 배경 딤 + 단일 카드(상/하단 띠 없는 평평한 디자인). 평소 숨김. -->
+        <Grid x:Name="ConfirmOverlay" Grid.Row="0" Grid.RowSpan="2"
+              Background="#99000000" Visibility="Collapsed">
+            <Border MaxWidth="360" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}"
+                    Padding="24">
+                <StackPanel>
+                    <ui:TextBlock x:Name="ConfirmTitle" FontTypography="BodyStrong" Margin="0,0,0,8" />
+                    <ui:TextBlock x:Name="ConfirmMessage" TextWrapping="Wrap"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <ui:Button x:Name="ConfirmCancelButton" Content="취소" MinWidth="84"
+                                   IsCancel="True" Click="OnConfirmCancel" Margin="0,0,8,0" />
+                        <ui:Button x:Name="ConfirmOkButton" Content="삭제" MinWidth="84"
+                                   Appearance="Danger" IsDefault="True" Click="OnConfirmOk" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </ui:FluentWindow>

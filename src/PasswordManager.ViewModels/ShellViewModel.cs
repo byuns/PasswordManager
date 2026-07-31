@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using PasswordManager.Core.Models;
 using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
+using PasswordManager.ViewModels.Services;
 
 namespace PasswordManager.ViewModels;
 
@@ -64,6 +65,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>열림 모드의 최상위 페이지를 보여줄 때만 사이드바를 노출한다.</summary>
     public bool IsSidebarVisible => Section is not null;
+
+    /// <summary>확인창·완료 토스트를 담당하는 다이얼로그 서비스. 창이 뜬 뒤 App/View가 주입한다(그 전엔 null).</summary>
+    public IDialogService? Dialog { get; set; }
 
     partial void OnSectionChanged(ShellSection? value) =>
         OnPropertyChanged(nameof(IsSidebarVisible));
@@ -140,11 +144,12 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_main is null)
         {
-            _main = new MainViewModel(_vault, _clipboard, _otpVerified);
+            _main = new MainViewModel(_vault, _clipboard, _otpVerified, Dialog);
             _main.Locked += OnLocked;
             _main.AddRequested += OnAddRequested;
             _main.EditRequested += OnEditRequested;
             _main.RevealRequested += OnRevealRequested;
+            _main.VerifyRequested += OnVerifyRequested;
         }
         else
         {
@@ -210,6 +215,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.AddRequested -= OnAddRequested;
             _main.EditRequested -= OnEditRequested;
             _main.RevealRequested -= OnRevealRequested;
+            _main.VerifyRequested -= OnVerifyRequested;
             _main = null;
         }
         if (_settings is not null)
@@ -255,10 +261,39 @@ public sealed partial class ShellViewModel : ObservableObject
         Section = null;
     }
 
+    private void OnVerifyRequested(object? sender, VaultEntry entry)
+    {
+        // 이미 이번 세션에 통과했으면(그레이스) 바로 목록으로(버튼은 이미 3개 상태).
+        if (_otpVerified.Contains(entry.Id))
+        {
+            ShowMain();
+            return;
+        }
+
+        var gate = new OtpGateViewModel(_vault, entry, copier: _clipboard, purpose: OtpGatePurpose.Verify);
+        void OnVerified(object? s, EventArgs e)
+        {
+            gate.Verified -= OnVerified;
+            gate.Cancelled -= OnCancelled;
+            _otpVerified.Add(entry.Id); // 세션 그레이스: 이 항목의 보기·편집·삭제가 열린다
+            ShowMain();
+        }
+        void OnCancelled(object? s, EventArgs e)
+        {
+            gate.Verified -= OnVerified;
+            gate.Cancelled -= OnCancelled;
+            ShowMain();
+        }
+        gate.Verified += OnVerified;
+        gate.Cancelled += OnCancelled;
+        CurrentViewModel = gate;
+        Section = null;
+    }
+
     private void ShowEditor(EntryEditViewModel editor)
     {
-        editor.Saved += OnEditorFinished;
-        editor.Cancelled += OnEditorFinished;
+        editor.Saved += OnEditorSaved;
+        editor.Cancelled += OnEditorCancelled;
         CurrentViewModel = editor;
         Section = null;
     }
@@ -282,14 +317,26 @@ public sealed partial class ShellViewModel : ObservableObject
         ShowSettings(); // 설정에서 진입했으므로 설정으로 복귀
     }
 
-    private void OnEditorFinished(object? sender, EventArgs e)
+    private void OnEditorSaved(object? sender, EventArgs e)
+    {
+        DetachEditor(sender);
+        ShowMain();
+        Dialog?.Notify("저장됨", "변경 내용을 저장했습니다.");
+    }
+
+    private void OnEditorCancelled(object? sender, EventArgs e)
+    {
+        DetachEditor(sender);
+        ShowMain();
+    }
+
+    private void DetachEditor(object? sender)
     {
         if (sender is EntryEditViewModel editor)
         {
-            editor.Saved -= OnEditorFinished;
-            editor.Cancelled -= OnEditorFinished;
+            editor.Saved -= OnEditorSaved;
+            editor.Cancelled -= OnEditorCancelled;
         }
-        ShowMain();
     }
 
     private void OnOtpSetupRequested(object? sender, EventArgs e)

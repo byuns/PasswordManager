@@ -42,8 +42,15 @@ public sealed partial class EntryEditViewModel : ObservableObject
     private string _title = string.Empty;
 
     [ObservableProperty] private string _url = string.Empty;
-    [ObservableProperty] private string _login = string.Empty;
-    [ObservableProperty] private string _password = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private string _login = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private string _password = string.Empty;
+
     [ObservableProperty] private string _notes = string.Empty;
 
     /// <summary>확정된 태그 칩들(입력창에서 Space/Enter로 추가). 인스타/블로그식 태그 입력.</summary>
@@ -58,7 +65,11 @@ public sealed partial class EntryEditViewModel : ObservableObject
     /// <summary>편집 취소 시 발생.</summary>
     public event EventHandler? Cancelled;
 
-    private bool CanSave() => !string.IsNullOrWhiteSpace(Title);
+    // 사이트명·아이디·비밀번호는 필수. 셋 다 채워야 저장할 수 있다.
+    private bool CanSave() =>
+        !string.IsNullOrWhiteSpace(Title) &&
+        !string.IsNullOrWhiteSpace(Login) &&
+        !string.IsNullOrWhiteSpace(Password);
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private void Save()

@@ -35,17 +35,11 @@ public partial class EntryEditView : UserControl
         if (!string.IsNullOrEmpty(vm.Password))
             ShowPlaceholder();
         vm.PropertyChanged += OnViewModelPropertyChanged;
-        vm.Saved += OnSaved;
         Unloaded += (_, _) =>
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
-            vm.Saved -= OnSaved;
         };
     }
-
-    /// <summary>저장 완료 시 확인 팝업을 띄운다.</summary>
-    private void OnSaved(object? sender, System.EventArgs e) =>
-        MessageBox.Show("저장되었습니다.", "완료", MessageBoxButton.OK, MessageBoxImage.Information);
 
     private void ShowPlaceholder()
     {

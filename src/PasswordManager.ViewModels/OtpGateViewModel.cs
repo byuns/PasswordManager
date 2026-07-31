@@ -13,6 +13,9 @@ public enum OtpGatePurpose
     Reveal,
     /// <summary>편집 진입 전 확인(검증 성공 시 <see cref="OtpGateViewModel.Verified"/>만 발생).</summary>
     Edit,
+    /// <summary>항목 잠금 해제만(검증 성공 시 <see cref="OtpGateViewModel.Verified"/>만 발생, 목록으로 복귀).
+    /// 통과하면 그 항목의 보기·편집·삭제가 열린다.</summary>
+    Verify,
 }
 
 /// <summary>
@@ -52,10 +55,20 @@ public sealed partial class OtpGateViewModel : ObservableObject
     public bool RequiresCode { get; }
 
     /// <summary>화면 제목(용도에 따라 다름).</summary>
-    public string Heading => Purpose == OtpGatePurpose.Edit ? "편집 전 확인" : "비밀번호 보기";
+    public string Heading => Purpose switch
+    {
+        OtpGatePurpose.Edit => "편집 전 확인",
+        OtpGatePurpose.Verify => "인증",
+        _ => "비밀번호 보기",
+    };
 
     /// <summary>기본 동작 버튼 문구.</summary>
-    public string ActionLabel => Purpose == OtpGatePurpose.Edit ? "확인" : "보기";
+    public string ActionLabel => Purpose switch
+    {
+        OtpGatePurpose.Edit => "확인",
+        OtpGatePurpose.Verify => "인증",
+        _ => "보기",
+    };
 
     /// <summary>어떤 항목을 여는지 화면에 보여주기 위한 제목.</summary>
     public string Title => _entry.Title;
@@ -101,7 +114,8 @@ public sealed partial class OtpGateViewModel : ObservableObject
             return;
         }
 
-        if (Purpose == OtpGatePurpose.Edit)
+        // 보기가 아닌 용도(편집·인증)는 비번을 노출하지 않고 검증 사실만 알린다.
+        if (Purpose != OtpGatePurpose.Reveal)
         {
             Verified?.Invoke(this, EventArgs.Empty);
             return;

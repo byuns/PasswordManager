@@ -20,6 +20,27 @@ public class MainViewModelTests
         public void Schedule(TimeSpan delay, Action action) { }
     }
 
+    /// <summary>확인창 결과를 미리 정해두고, 호출 횟수·마지막 토스트 메시지를 기록하는 가짜 다이얼로그.</summary>
+    private sealed class FakeDialog : IDialogService
+    {
+        public bool ConfirmResult { get; set; } = true;
+        public int ConfirmCount { get; private set; }
+        public int NotifyCount { get; private set; }
+        public string? LastNotifyMessage { get; private set; }
+
+        public Task<bool> ConfirmAsync(string title, string message, string confirmText, string cancelText)
+        {
+            ConfirmCount++;
+            return Task.FromResult(ConfirmResult);
+        }
+
+        public void Notify(string title, string message)
+        {
+            NotifyCount++;
+            LastNotifyMessage = message;
+        }
+    }
+
     private static readonly KdfParams Light = new(MemoryKiB: 8192, Iterations: 2, Parallelism: 1);
     private const string Master = "correct horse battery staple";
     private const string Path = "vault.dat";
@@ -95,6 +116,35 @@ public class MainViewModelTests
         Assert.Single(vm.Entries);
         Assert.Equal("GitHub", vm.Entries[0].Title);
         Assert.Null(vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void Delete_asks_confirmation_and_removes_and_notifies_when_confirmed()
+    {
+        var dialog = new FakeDialog { ConfirmResult = true };
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")), dialog: dialog);
+        var target = vm.Entries.First(e => e.Title == "Steam");
+
+        vm.DeleteCommand.Execute(target);
+
+        Assert.Equal(1, dialog.ConfirmCount);
+        Assert.Single(vm.Entries);
+        Assert.Equal("GitHub", vm.Entries[0].Title);
+        Assert.Equal(1, dialog.NotifyCount);
+    }
+
+    [Fact]
+    public void Delete_cancelled_keeps_entry_and_does_not_notify()
+    {
+        var dialog = new FakeDialog { ConfirmResult = false };
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")), dialog: dialog);
+        var target = vm.Entries.First(e => e.Title == "Steam");
+
+        vm.DeleteCommand.Execute(target);
+
+        Assert.Equal(1, dialog.ConfirmCount);
+        Assert.Equal(2, vm.Entries.Count);
+        Assert.Equal(0, dialog.NotifyCount);
     }
 
     [Fact]
@@ -258,6 +308,37 @@ public class MainViewModelTests
         vm.RevealCommand.Execute(null);
 
         Assert.Same(vm.SelectedEntry, requested);
+    }
+
+    // --- 인증 게이트 (행별 단일 '인증' 버튼 → 통과 후 보기/편집/삭제) ---
+
+    [Fact]
+    public void Verify_with_otp_raises_VerifyRequested_with_that_entry()
+    {
+        var manager = UnlockedWith(("Steam", "gamer"));
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        var vm = new MainViewModel(manager);
+        var target = vm.Entries[0];
+        VaultEntry? requested = null;
+        vm.VerifyRequested += (_, e) => requested = e;
+
+        vm.VerifyCommand.Execute(target);
+
+        Assert.Same(target, requested);
+    }
+
+    [Fact]
+    public void Verify_without_otp_shows_hint_and_does_not_request()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
+        var target = vm.Entries[0];
+        VaultEntry? requested = null;
+        vm.VerifyRequested += (_, e) => requested = e;
+
+        vm.VerifyCommand.Execute(target);
+
+        Assert.Null(requested);
+        Assert.False(string.IsNullOrEmpty(vm.StatusMessage));
     }
 
     // --- 카드 내 액션(항목을 인자로 직접 전달, design-ux §4) ---

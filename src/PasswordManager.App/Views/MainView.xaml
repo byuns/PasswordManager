@@ -140,13 +140,9 @@
                                                                   TextTrimming="CharacterEllipsis"
                                                                   ToolTipService.InitialShowDelay="300"
                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                                        <!-- 메모 미리보기: OTP 통과 항목에만 hover로 짧게 노출 -->
+                                                        <!-- 메모 미리보기: 민감정보 미기재 전제로 OTP 없이 hover로 짧게 노출 -->
                                                         <ToolTipService.ToolTip>
-                                                            <MultiBinding Converter="{StaticResource EntryNotesTooltip}">
-                                                                <Binding />
-                                                                <Binding Path="DataContext.OtpVerifiedIds"
-                                                                         RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                                            </MultiBinding>
+                                                            <Binding Converter="{StaticResource EntryNotesTooltip}" />
                                                         </ToolTipService.ToolTip>
                                                     </ui:TextBlock>
                                                     <ui:Button Padding="4" Margin="6,0,0,0" VerticalAlignment="Center"
@@ -180,21 +176,46 @@
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <ui:Button Icon="{ui:SymbolIcon Eye24}" ToolTip="보기"
-                                                                   Command="{Binding DataContext.RevealCommand,
+                                                    <!-- 인증 전엔 '인증' 버튼 하나, OTP 통과 후 보기/편집/삭제 3버튼으로 전환 -->
+                                                    <Grid>
+                                                        <ui:Button Icon="{ui:SymbolIcon LockClosed24}" ToolTip="인증"
+                                                                   Appearance="Transparent"
+                                                                   Command="{Binding DataContext.VerifyCommand,
                                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                   CommandParameter="{Binding}" />
-                                                        <ui:Button Icon="{ui:SymbolIcon Edit24}" ToolTip="편집" Margin="4,0,0,0"
-                                                                   Command="{Binding DataContext.EditCommand,
-                                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                   CommandParameter="{Binding}" />
-                                                        <ui:Button Icon="{ui:SymbolIcon Delete24}" ToolTip="삭제" Margin="4,0,0,0"
-                                                                   Appearance="Danger"
-                                                                   Command="{Binding DataContext.DeleteCommand,
-                                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                   CommandParameter="{Binding}" />
-                                                    </StackPanel>
+                                                                   CommandParameter="{Binding}">
+                                                            <ui:Button.Visibility>
+                                                                <MultiBinding Converter="{StaticResource EntryVerified}"
+                                                                              ConverterParameter="unverified" Mode="OneWay">
+                                                                    <Binding />
+                                                                    <Binding Path="DataContext.OtpVerifiedIds"
+                                                                             RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                                </MultiBinding>
+                                                            </ui:Button.Visibility>
+                                                        </ui:Button>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <StackPanel.Visibility>
+                                                                <MultiBinding Converter="{StaticResource EntryVerified}"
+                                                                              ConverterParameter="verified" Mode="OneWay">
+                                                                    <Binding />
+                                                                    <Binding Path="DataContext.OtpVerifiedIds"
+                                                                             RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                                </MultiBinding>
+                                                            </StackPanel.Visibility>
+                                                            <ui:Button Icon="{ui:SymbolIcon Eye24}" ToolTip="보기"
+                                                                       Command="{Binding DataContext.RevealCommand,
+                                                                                 RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                       CommandParameter="{Binding}" />
+                                                            <ui:Button Icon="{ui:SymbolIcon Edit24}" ToolTip="편집" Margin="4,0,0,0"
+                                                                       Command="{Binding DataContext.EditCommand,
+                                                                                 RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                       CommandParameter="{Binding}" />
+                                                            <ui:Button Icon="{ui:SymbolIcon Delete24}" ToolTip="삭제" Margin="4,0,0,0"
+                                                                       Appearance="Danger"
+                                                                       Command="{Binding DataContext.DeleteCommand,
+                                                                                 RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                       CommandParameter="{Binding}" />
+                                                        </StackPanel>
+                                                    </Grid>
                                                 </StackPanel>
                                             </Grid>
                                         </DataTemplate>

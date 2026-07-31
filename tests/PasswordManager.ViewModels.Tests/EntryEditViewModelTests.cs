@@ -36,16 +36,22 @@ public class EntryEditViewModelTests
     }
 
     [Fact]
-    public void Save_disabled_until_title_present()
+    public void Save_requires_title_login_and_password()
     {
         var vm = new EntryEditViewModel(Unlocked());
         Assert.False(vm.SaveCommand.CanExecute(null));
 
-        vm.Title = "   ";
-        Assert.False(vm.SaveCommand.CanExecute(null));
-
         vm.Title = "Steam";
-        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.False(vm.SaveCommand.CanExecute(null));   // 아이디·비번 없음
+
+        vm.Login = "gamer";
+        Assert.False(vm.SaveCommand.CanExecute(null));   // 비번 없음
+
+        vm.Password = "pw";
+        Assert.True(vm.SaveCommand.CanExecute(null));    // 셋 다 있으면 가능
+
+        vm.Title = "   ";
+        Assert.False(vm.SaveCommand.CanExecute(null));   // 공백만은 불가
     }
 
     [Fact]
@@ -97,7 +103,7 @@ public class EntryEditViewModelTests
     public void Save_persists_tag_chips()
     {
         var manager = Unlocked();
-        var vm = new EntryEditViewModel(manager) { Title = "GitHub" };
+        var vm = new EntryEditViewModel(manager) { Title = "GitHub", Login = "dev", Password = "pw" };
         vm.TagInput = "work"; vm.AddTagCommand.Execute(null);
         vm.TagInput = "dev";  vm.AddTagCommand.Execute(null);
 
@@ -110,7 +116,7 @@ public class EntryEditViewModelTests
     public void Save_commits_pending_tag_input()
     {
         var manager = Unlocked();
-        var vm = new EntryEditViewModel(manager) { Title = "GitHub", TagInput = "#solo" };
+        var vm = new EntryEditViewModel(manager) { Title = "GitHub", Login = "dev", Password = "pw", TagInput = "#solo" };
 
         vm.SaveCommand.Execute(null);
 

@@ -13,16 +13,25 @@
                 <ui:TextBlock FontTypography="Title" Margin="0,0,0,24"
                               Text="{Binding IsNew, Converter={StaticResource BoolToTitle}}" />
 
-            <ui:TextBlock Text="사이트명" Margin="0,0,0,4" />
+            <ui:TextBlock Margin="0,0,0,4">
+                <Run Text="사이트명" />
+                <Run Text="*" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </ui:TextBlock>
             <ui:TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
 
             <ui:TextBlock Text="주소(URL)" Margin="0,12,0,4" />
             <ui:TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" />
 
-            <ui:TextBlock Text="아이디" Margin="0,12,0,4" />
+            <ui:TextBlock Margin="0,12,0,4">
+                <Run Text="아이디" />
+                <Run Text="*" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </ui:TextBlock>
             <ui:TextBox Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}" />
 
-            <ui:TextBlock Text="비밀번호" Margin="0,12,0,4" />
+            <ui:TextBlock Margin="0,12,0,4">
+                <Run Text="비밀번호" />
+                <Run Text="*" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </ui:TextBlock>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -85,7 +94,11 @@
                         PlaceholderText="#태그 입력 후 Space 또는 Enter"
                         PreviewKeyDown="TagInput_PreviewKeyDown" />
 
-            <ui:TextBlock Text="메모" Margin="0,12,0,4" />
+            <ui:TextBlock Text="메모" Margin="0,12,0,2" />
+            <!-- 메모는 OTP 없이 hover로 바로 보이므로 민감정보 입력을 경고한다 -->
+            <ui:TextBlock FontTypography="Caption" Margin="0,0,0,4"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Text="⚠ 비밀번호·주민번호 등 중요한 정보는 적지 마세요. 메모는 인증 없이 보입니다." />
             <ui:TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
                         AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
 

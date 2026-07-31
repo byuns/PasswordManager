@@ -1,5 +1,8 @@
 using System;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Threading;
+using PasswordManager.App.Services;
 using PasswordManager.ViewModels;
 using Wpf.Ui.Controls;
 
@@ -36,6 +39,46 @@ public partial class ShellWindow : FluentWindow
                 shell.AutoLock();
         };
         _poll.Start();
+
+        // 창의 팝업 호스트가 준비된 뒤 다이얼로그 서비스를 셸에 주입한다(확인창·완료 토스트).
+        Loaded += OnShellLoaded;
+    }
+
+    private void OnShellLoaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ShellViewModel shell)
+            shell.Dialog ??= new WpfUiDialogService(ShowConfirmAsync, RootSnackbar);
+    }
+
+    private TaskCompletionSource<bool>? _confirmTcs;
+
+    /// <summary>커스텀 확인 오버레이를 띄우고 사용자의 선택(확인=true/취소=false)을 비동기로 돌려준다.</summary>
+    private Task<bool> ShowConfirmAsync(string title, string message, string confirmText, string cancelText)
+    {
+        // 앞선 확인이 남아 있으면 취소로 정리한다(중복 표시 방지).
+        _confirmTcs?.TrySetResult(false);
+
+        ConfirmTitle.Text = title;
+        ConfirmMessage.Text = message;
+        ConfirmOkButton.Content = confirmText;
+        ConfirmCancelButton.Content = cancelText;
+
+        _confirmTcs = new TaskCompletionSource<bool>();
+        ConfirmOverlay.Visibility = Visibility.Visible;
+        ConfirmCancelButton.Focus(); // 파괴적 동작이므로 기본 포커스는 취소에 둔다
+        return _confirmTcs.Task;
+    }
+
+    private void OnConfirmOk(object sender, RoutedEventArgs e) => CloseConfirm(true);
+
+    private void OnConfirmCancel(object sender, RoutedEventArgs e) => CloseConfirm(false);
+
+    private void CloseConfirm(bool result)
+    {
+        ConfirmOverlay.Visibility = Visibility.Collapsed;
+        var tcs = _confirmTcs;
+        _confirmTcs = null;
+        tcs?.TrySetResult(result);
     }
 
     private void NotifyActivity() => _autoLock.NotifyActivity(DateTimeOffset.UtcNow);

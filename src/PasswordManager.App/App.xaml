@@ -23,6 +23,7 @@
             <conv:LimitTagsConverter x:Key="LimitTags" />
             <conv:TagSelectedConverter x:Key="TagSelected" />
             <conv:EntryNotesTooltipConverter x:Key="EntryNotesTooltip" />
+            <conv:EntryVerifiedConverter x:Key="EntryVerified" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
             <!-- ViewModel ↔ View 매핑 -->

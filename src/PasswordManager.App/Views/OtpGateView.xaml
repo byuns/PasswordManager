@@ -7,79 +7,99 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-    <Grid MaxWidth="420" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
-        <StackPanel>
-            <ui:TextBlock FontTypography="Title" Text="{Binding Heading}" Margin="0,0,0,4" />
-            <ui:TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                          Margin="0,0,0,16" />
+    <Grid MaxWidth="400" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+        <!-- 게이트 카드: 아이콘 헤더 + 코드 입력/비번 표시를 한 카드에 정돈 -->
+        <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}"
+                Padding="28,24">
+            <StackPanel>
+                <!-- 아이콘 헤더 -->
+                <Border Width="56" Height="56" CornerRadius="28"
+                        Background="{DynamicResource AccentFillColorDefaultBrush}"
+                        HorizontalAlignment="Center" Margin="0,0,0,12">
+                    <ui:SymbolIcon Symbol="LockClosed24" FontSize="26"
+                                   Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <ui:TextBlock FontTypography="Subtitle" Text="{Binding Heading}"
+                              HorizontalAlignment="Center" />
+                <ui:TextBlock Text="{Binding Title}" HorizontalAlignment="Center"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                              Margin="0,2,0,20" TextTrimming="CharacterEllipsis" />
 
-            <!-- 코드 입력 (그레이스로 이미 통과한 보기면 숨김) -->
-            <StackPanel Visibility="{Binding RequiresCode, Converter={StaticResource BoolToVisibility}}">
-                <ui:TextBlock Text="디바이스의 6자리 코드를 입력하세요." Margin="0,0,0,4" />
-                <ui:TextBox Text="{Binding VerificationCode, UpdateSourceTrigger=PropertyChanged}"
-                            MaxLength="8" PlaceholderText="123456" />
+                <!-- 코드 입력 (그레이스로 이미 통과한 보기면 숨김) -->
+                <StackPanel Visibility="{Binding RequiresCode, Converter={StaticResource BoolToVisibility}}">
+                    <ui:TextBox Text="{Binding VerificationCode, UpdateSourceTrigger=PropertyChanged}"
+                                MaxLength="8" PlaceholderText="- - - - - -"
+                                HorizontalContentAlignment="Center"
+                                FontFamily="Consolas" FontSize="24" />
+                    <ui:TextBlock Text="디바이스의 6자리 코드를 입력하세요."
+                                  HorizontalAlignment="Center" Margin="0,8,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                  Text="{Binding ErrorMessage}" HorizontalAlignment="Center"
+                                  Visibility="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToVisibility}}"
+                                  TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" />
+                </StackPanel>
 
-                <ui:TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                              Text="{Binding ErrorMessage}"
-                              Visibility="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToVisibility}}"
-                              TextWrapping="Wrap" Margin="0,8,0,0" />
-            </StackPanel>
+                <!-- 검증 성공 후에만 표시되는 평문 비밀번호 -->
+                <StackPanel Visibility="{Binding RevealedPassword, Converter={StaticResource StringNotEmptyToVisibility}}"
+                            Margin="0,4,0,0">
+                    <ui:TextBlock Text="비밀번호" Margin="0,0,0,4" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0" Text="{Binding RevealedPassword, Mode=OneWay}"
+                                    IsReadOnly="True" FontFamily="Consolas" FontSize="16" />
+                        <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0"
+                                   ToolTip="복사 (20초 후 자동 삭제)"
+                                   Command="{Binding CopyCommand}" CommandParameter="{Binding RevealedPassword}" />
+                    </Grid>
+                    <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="{Binding LastChangedAt, StringFormat='마지막 변경: {0:yyyy-MM-dd}'}"
+                                  Margin="0,4,0,0" />
 
-            <!-- 검증 성공 후에만 표시되는 평문 비밀번호 -->
-            <StackPanel Visibility="{Binding RevealedPassword, Converter={StaticResource StringNotEmptyToVisibility}}"
-                        Margin="0,12,0,0">
-                <ui:TextBlock Text="비밀번호" Margin="0,0,0,4" />
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBox Grid.Column="0" Text="{Binding RevealedPassword, Mode=OneWay}"
-                                IsReadOnly="True" FontFamily="Consolas" />
-                    <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0"
-                               ToolTip="복사 (20초 후 자동 삭제)"
-                               Command="{Binding CopyCommand}" CommandParameter="{Binding RevealedPassword}" />
-                </Grid>
-                <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                              Text="{Binding LastChangedAt, StringFormat='마지막 변경: {0:yyyy-MM-dd}'}"
-                              Margin="0,4,0,0" />
+                    <!-- 이전 비밀번호 이력(옛 비번도 secret → 게이트 통과 후에만, TD-021) -->
+                    <StackPanel Margin="0,16,0,0"
+                                Visibility="{Binding RevealedHistory.Count, Converter={StaticResource CountToVisibility}}">
+                        <ui:TextBlock Text="이전 비밀번호"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding RevealedHistory}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBox Grid.Column="0" Text="{Binding Password, Mode=OneWay}"
+                                                    IsReadOnly="True" FontFamily="Consolas" />
+                                        <ui:TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="{Binding ChangedAt, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                                        <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0"
+                                                   ToolTip="복사 (20초 후 자동 삭제)"
+                                                   Command="{Binding DataContext.CopyCommand,
+                                                             RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding Password}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
 
-                <!-- 이전 비밀번호 이력(옛 비번도 secret → 게이트 통과 후에만, TD-021) -->
-                <StackPanel Margin="0,12,0,0"
-                            Visibility="{Binding RevealedHistory.Count, Converter={StaticResource CountToVisibility}}">
-                    <ui:TextBlock Text="이전 비밀번호" Margin="0,0,0,4" />
-                    <ItemsControl ItemsSource="{Binding RevealedHistory}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,0,0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <ui:TextBox Grid.Column="0" Text="{Binding Password, Mode=OneWay}"
-                                                IsReadOnly="True" FontFamily="Consolas" />
-                                    <ui:TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"
-                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                  Text="{Binding ChangedAt, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                                    <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0"
-                                               ToolTip="복사 (20초 후 자동 삭제)"
-                                               Command="{Binding DataContext.CopyCommand,
-                                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                               CommandParameter="{Binding Password}" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                    <ui:Button Content="닫기" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
+                    <ui:Button Content="{Binding ActionLabel}" Appearance="Primary" Command="{Binding RevealCommand}"
+                               IsDefault="True"
+                               Visibility="{Binding RequiresCode, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </StackPanel>
-
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-                <ui:Button Content="닫기" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
-                <ui:Button Content="{Binding ActionLabel}" Appearance="Primary" Command="{Binding RevealCommand}"
-                           IsDefault="True"
-                           Visibility="{Binding RequiresCode, Converter={StaticResource BoolToVisibility}}" />
-            </StackPanel>
-        </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

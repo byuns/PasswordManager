@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PasswordManager.Core.Models;
 using PasswordManager.Core.Vault;
+using PasswordManager.ViewModels.Services;
 
 namespace PasswordManager.ViewModels;
 
@@ -30,12 +31,15 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly VaultManager _vault;
     private readonly ClipboardCopier? _copier;
     private readonly ISet<string> _otpVerified;
+    private readonly IDialogService? _dialog;
 
-    public MainViewModel(VaultManager vault, ClipboardCopier? copier = null, ISet<string>? otpVerified = null)
+    public MainViewModel(VaultManager vault, ClipboardCopier? copier = null, ISet<string>? otpVerified = null,
+        IDialogService? dialog = null)
     {
         _vault = vault;
         _copier = copier;
         _otpVerified = otpVerified ?? new HashSet<string>();
+        _dialog = dialog;
         Refresh();
     }
 
@@ -79,6 +83,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>선택 항목 비밀번호 열람 요청. 셸이 OTP 게이트를 연다(design 7.4).</summary>
     public event EventHandler<VaultEntry>? RevealRequested;
+
+    /// <summary>항목 인증(잠금 해제) 요청. 셸이 OTP 게이트를 열고, 통과하면 그 항목의
+    /// 보기·편집·삭제 버튼이 열린다(행별 단일 '인증' 버튼 → 3버튼 전환).</summary>
+    public event EventHandler<VaultEntry>? VerifyRequested;
 
     partial void OnSearchQueryChanged(string value) => Refresh();
 
@@ -165,13 +173,18 @@ public sealed partial class MainViewModel : ObservableObject
     private bool CanActOn(VaultEntry? entry) => (entry ?? SelectedEntry) is not null;
 
     [RelayCommand(CanExecute = nameof(CanActOn))]
-    private void Delete(VaultEntry? entry)
+    private async Task DeleteAsync(VaultEntry? entry)
     {
         var target = entry ?? SelectedEntry;
         if (target is null) return;
+        // 실수 방지: 다이얼로그가 있으면 삭제 전 확인을 받는다(취소 시 아무것도 안 함).
+        if (_dialog is not null && !await _dialog.ConfirmAsync(
+                "삭제 확인", $"‘{target.Title}’ 항목을 삭제할까요?\n삭제하면 되돌릴 수 없습니다.", "삭제", "취소"))
+            return;
         _vault.Remove(target.Id);
         if (ReferenceEquals(target, SelectedEntry)) SelectedEntry = null;
         Refresh();
+        _dialog?.Notify("삭제됨", "항목을 삭제했습니다.");
     }
 
     [RelayCommand(CanExecute = nameof(CanActOn))]
@@ -188,6 +201,22 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
         EditRequested?.Invoke(this, target);
+    }
+
+    /// <summary>행별 '인증' 버튼. OTP 게이트를 열어 이 항목의 보기·편집·삭제를 연다.
+    /// 미등록이면 먼저 등록을 안내한다(design R5·7.4).</summary>
+    [RelayCommand(CanExecute = nameof(CanActOn))]
+    private void Verify(VaultEntry? entry)
+    {
+        var target = entry ?? SelectedEntry;
+        if (target is null) return;
+        StatusMessage = null;
+        if (!_vault.HasOtp)
+        {
+            StatusMessage = "항목을 인증하려면 먼저 OTP를 등록하세요.";
+            return;
+        }
+        VerifyRequested?.Invoke(this, target);
     }
 
     [RelayCommand]
