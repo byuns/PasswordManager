@@ -46,6 +46,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private SettingsViewModel? _settings;
     private InfoViewModel? _info;
 
+    /// <summary>OTP 등록 화면을 메인(항목 목록)에서 열었는지. true면 완료·취소 후 메인으로, 아니면 설정으로 복귀.</summary>
+    private bool _otpSetupFromMain;
+
     /// <summary>이번 세션에 OTP 게이트를 통과한 항목 ID. 한 번 통과하면 그 항목의 보기·편집을
     /// 코드 없이 연다(TD-004). 볼트가 잠기면 비운다.</summary>
     private readonly HashSet<string> _otpVerified = new();
@@ -150,6 +153,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.EditRequested += OnEditRequested;
             _main.RevealRequested += OnRevealRequested;
             _main.VerifyRequested += OnVerifyRequested;
+            _main.OtpSetupRequested += OnMainOtpSetupRequested;
         }
         else
         {
@@ -216,6 +220,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _main.EditRequested -= OnEditRequested;
             _main.RevealRequested -= OnRevealRequested;
             _main.VerifyRequested -= OnVerifyRequested;
+            _main.OtpSetupRequested -= OnMainOtpSetupRequested;
             _main = null;
         }
         if (_settings is not null)
@@ -259,6 +264,13 @@ public sealed partial class ShellViewModel : ObservableObject
         gate.Cancelled += OnCancelled;
         CurrentViewModel = gate;
         Section = null;
+    }
+
+    private void OnMainOtpSetupRequested(object? sender, EventArgs e)
+    {
+        // 메인의 미등록 행 버튼('OTP 등록')에서 진입 → 등록 후 메인으로 복귀.
+        _otpSetupFromMain = true;
+        OpenOtpSetup();
     }
 
     private void OnVerifyRequested(object? sender, VaultEntry entry)
@@ -341,6 +353,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnOtpSetupRequested(object? sender, EventArgs e)
     {
+        _otpSetupFromMain = false; // 설정에서 진입 → 완료 후 설정으로 복귀
         // 재설정(이미 등록됨)은 마스터 비번 재확인을 거친다(TD-005). 최초 등록은 방금 언락했으므로 바로 진행.
         if (_vault.HasOtp)
         {
@@ -393,7 +406,16 @@ public sealed partial class ShellViewModel : ObservableObject
             vm.Completed -= OnOtpSetupFinished;
             vm.Cancelled -= OnOtpSetupFinished;
         }
-        ShowSettings(); // 설정에서 진입했으므로 설정으로 복귀(등록 상태 갱신)
+        // 진입한 곳으로 복귀(메인이면 목록 갱신 → 등록됐으면 행 버튼이 '인증'으로 전환).
+        if (_otpSetupFromMain)
+        {
+            _otpSetupFromMain = false;
+            ShowMain();
+        }
+        else
+        {
+            ShowSettings();
+        }
     }
 
     private void OnRevealRequested(object? sender, VaultEntry entry)

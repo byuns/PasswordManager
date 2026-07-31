@@ -47,6 +47,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// 이 집합에 든 항목에만 노출한다(열람·편집과 동일한 게이트, design 7.4).</summary>
     public IEnumerable<string> OtpVerifiedIds => _otpVerified;
 
+    /// <summary>볼트에 OTP가 등록돼 있는지. 미등록이면 행 버튼을 'OTP 등록' 유도로 바꾼다(TD-032 후속).</summary>
+    public bool HasOtp => _vault.HasOtp;
+
+    /// <summary>OTP 미등록 상태(=등록 유도 버튼 노출 조건). <see cref="HasOtp"/>의 반대.</summary>
+    public bool RequiresOtpSetup => !_vault.HasOtp;
+
     /// <summary>현재 화면에 보이는(검색 필터가 적용된) 항목들(평면).</summary>
     public ObservableCollection<VaultEntry> Entries { get; } = new();
 
@@ -88,6 +94,9 @@ public sealed partial class MainViewModel : ObservableObject
     /// 보기·편집·삭제 버튼이 열린다(행별 단일 '인증' 버튼 → 3버튼 전환).</summary>
     public event EventHandler<VaultEntry>? VerifyRequested;
 
+    /// <summary>OTP 미등록 상태에서 인증을 시도했을 때 발생. 셸이 OTP 등록 화면으로 안내한다(TD-032 후속).</summary>
+    public event EventHandler? OtpSetupRequested;
+
     partial void OnSearchQueryChanged(string value) => Refresh();
 
     /// <summary>볼트에서 항목을 다시 읽어 검색·태그 필터를 적용해 목록을 갱신한다.</summary>
@@ -125,6 +134,10 @@ public sealed partial class MainViewModel : ObservableObject
             }
             group.Accounts.Add(entry);
         }
+
+        // OTP 등록 상태가 바뀌었을 수 있으니(예: 등록 후 복귀) 행 버튼 전환용 플래그를 갱신 통지한다.
+        OnPropertyChanged(nameof(HasOtp));
+        OnPropertyChanged(nameof(RequiresOtpSetup));
     }
 
     /// <summary>전체 항목의 고유 태그로 <see cref="AvailableTags"/>를 다시 만들고,
@@ -213,7 +226,8 @@ public sealed partial class MainViewModel : ObservableObject
         StatusMessage = null;
         if (!_vault.HasOtp)
         {
-            StatusMessage = "항목을 인증하려면 먼저 OTP를 등록하세요.";
+            // 미등록이면 막지 말고 등록 화면으로 안내한다(등록해야 보기·편집·삭제가 열림).
+            OtpSetupRequested?.Invoke(this, EventArgs.Empty);
             return;
         }
         VerifyRequested?.Invoke(this, target);

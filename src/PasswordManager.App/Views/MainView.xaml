@@ -49,8 +49,10 @@
             <ui:TextBox Grid.Column="0" PlaceholderText="검색 (사이트·아이디)"
                         Icon="{ui:SymbolIcon Search24}"
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
-            <ui:Button Grid.Column="1" Content="새 항목" Icon="{ui:SymbolIcon Add24}"
-                       Appearance="Primary" Margin="8,0,0,0" Command="{Binding NewEntryCommand}" />
+            <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Add24}" ToolTip="새 항목"
+                       Appearance="Primary" Width="36" Height="36" Padding="0"
+                       CornerRadius="18" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                       Margin="8,0,0,0" Command="{Binding NewEntryCommand}" />
         </Grid>
 
         <!-- 태그 필터 칩 바 (TD-029: 여러 개 선택 시 OR). 태그가 있을 때만 표시 -->
@@ -176,22 +178,37 @@
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
-                                                    <!-- 인증 전엔 '인증' 버튼 하나, OTP 통과 후 보기/편집/삭제 3버튼으로 전환 -->
+                                                    <!-- 인증 전엔 인증/등록 버튼, OTP 통과 후 보기/편집/삭제 3버튼으로 전환 -->
                                                     <Grid>
-                                                        <ui:Button Icon="{ui:SymbolIcon LockClosed24}" ToolTip="인증"
-                                                                   Appearance="Transparent"
-                                                                   Command="{Binding DataContext.VerifyCommand,
-                                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                   CommandParameter="{Binding}">
-                                                            <ui:Button.Visibility>
+                                                        <!-- 미인증 슬롯: OTP 등록 여부에 따라 '인증' 또는 'OTP 등록' -->
+                                                        <Grid>
+                                                            <Grid.Visibility>
                                                                 <MultiBinding Converter="{StaticResource EntryVerified}"
                                                                               ConverterParameter="unverified" Mode="OneWay">
                                                                     <Binding />
                                                                     <Binding Path="DataContext.OtpVerifiedIds"
                                                                              RelativeSource="{RelativeSource AncestorType=UserControl}" />
                                                                 </MultiBinding>
-                                                            </ui:Button.Visibility>
-                                                        </ui:Button>
+                                                            </Grid.Visibility>
+                                                            <!-- OTP 등록됨: 자물쇠 '인증' -->
+                                                            <ui:Button Icon="{ui:SymbolIcon LockClosed24}" ToolTip="인증"
+                                                                       Appearance="Transparent"
+                                                                       Visibility="{Binding DataContext.HasOtp,
+                                                                                    RelativeSource={RelativeSource AncestorType=UserControl},
+                                                                                    Converter={StaticResource BoolToVisibility}}"
+                                                                       Command="{Binding DataContext.VerifyCommand,
+                                                                                 RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                       CommandParameter="{Binding}" />
+                                                            <!-- OTP 미등록: 등록 화면으로 유도 -->
+                                                            <ui:Button Content="OTP 등록" Icon="{ui:SymbolIcon Key24}"
+                                                                       Appearance="Secondary"
+                                                                       Visibility="{Binding DataContext.RequiresOtpSetup,
+                                                                                    RelativeSource={RelativeSource AncestorType=UserControl},
+                                                                                    Converter={StaticResource BoolToVisibility}}"
+                                                                       Command="{Binding DataContext.VerifyCommand,
+                                                                                 RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                       CommandParameter="{Binding}" />
+                                                        </Grid>
                                                         <StackPanel Orientation="Horizontal">
                                                             <StackPanel.Visibility>
                                                                 <MultiBinding Converter="{StaticResource EntryVerified}"

@@ -328,17 +328,31 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void Verify_without_otp_shows_hint_and_does_not_request()
+    public void Verify_without_otp_requests_setup_not_verify()
     {
         var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")));
         var target = vm.Entries[0];
-        VaultEntry? requested = null;
-        vm.VerifyRequested += (_, e) => requested = e;
+        VaultEntry? verifyReq = null;
+        var setupReq = false;
+        vm.VerifyRequested += (_, e) => verifyReq = e;
+        vm.OtpSetupRequested += (_, _) => setupReq = true;
 
         vm.VerifyCommand.Execute(target);
 
-        Assert.Null(requested);
-        Assert.False(string.IsNullOrEmpty(vm.StatusMessage));
+        Assert.Null(verifyReq);   // 인증 게이트가 아니라
+        Assert.True(setupReq);    // OTP 등록으로 유도
+    }
+
+    [Fact]
+    public void HasOtp_reflects_vault_registration()
+    {
+        var manager = UnlockedWith(("Steam", "gamer"));
+        var vm = new MainViewModel(manager);
+        Assert.False(vm.HasOtp);
+
+        manager.SetOtpSecret(TotpValidator.GenerateSecret());
+        vm.Refresh();
+        Assert.True(vm.HasOtp);
     }
 
     // --- 카드 내 액션(항목을 인자로 직접 전달, design-ux §4) ---
