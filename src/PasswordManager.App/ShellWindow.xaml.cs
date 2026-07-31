@@ -65,7 +65,9 @@ public partial class ShellWindow : FluentWindow
 
         _confirmTcs = new TaskCompletionSource<bool>();
         ConfirmOverlay.Visibility = Visibility.Visible;
-        ConfirmCancelButton.Focus(); // 파괴적 동작이므로 기본 포커스는 취소에 둔다
+        // 방금 Visible이 된 직후 동기 Focus는 실패할 수 있어 레이아웃 후로 미룬다.
+        // 파괴적 동작이므로 기본 포커스는 취소 버튼에 둔다(포커스 트랩은 XAML의 KeyboardNavigation=Cycle).
+        Dispatcher.BeginInvoke(new Action(() => ConfirmCancelButton.Focus()), DispatcherPriority.Input);
         return _confirmTcs.Task;
     }
 

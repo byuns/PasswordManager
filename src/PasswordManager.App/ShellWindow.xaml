@@ -63,9 +63,13 @@
                               MaxWidth="420" Margin="0,0,0,32"
                               HorizontalAlignment="Center" VerticalAlignment="Bottom" />
 
-        <!-- 삭제 등 확인 오버레이: 배경 딤 + 단일 카드(상/하단 띠 없는 평평한 디자인). 평소 숨김. -->
+        <!-- 삭제 등 확인 오버레이: 배경 딤 + 단일 카드(상/하단 띠 없는 평평한 디자인). 평소 숨김.
+             Tab이 뒤 화면으로 새지 않도록 카드 안에서만 순환(포커스 트랩). 마우스는 딤 배경이 막는다. -->
         <Grid x:Name="ConfirmOverlay" Grid.Row="0" Grid.RowSpan="2"
-              Background="#99000000" Visibility="Collapsed">
+              Background="#99000000" Visibility="Collapsed"
+              KeyboardNavigation.TabNavigation="Cycle"
+              KeyboardNavigation.ControlTabNavigation="Cycle"
+              KeyboardNavigation.DirectionalNavigation="Cycle">
             <Border MaxWidth="360" VerticalAlignment="Center" HorizontalAlignment="Center"
                     Background="{DynamicResource ApplicationBackgroundBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
