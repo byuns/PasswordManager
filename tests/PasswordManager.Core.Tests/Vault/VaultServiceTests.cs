@@ -227,4 +227,51 @@ public class VaultServiceTests
         Assert.Equal(result.Vault.Ciphertext, upgraded.Ciphertext);        // 본문 그대로
         Assert.Equal(content, VaultService.OpenWithRecoveryKey(upgraded, result.RecoveryKey)); // 복구 경로 유지
     }
+
+    // --- 복구 키 재발급 (M5, design 7.6) ---
+
+    [Fact]
+    public void ReissueRecoveryKey_returns_new_key_that_opens_vault()
+    {
+        var content = Content();
+        var result = VaultService.Create(Master, content, Light);
+
+        var reissued = VaultService.ReissueRecoveryKey(result.Vault, Master);
+
+        Assert.NotEqual(result.RecoveryKey, reissued.RecoveryKey);                       // 새 복구 키
+        Assert.Equal(content, VaultService.OpenWithRecoveryKey(reissued.Vault, reissued.RecoveryKey));
+    }
+
+    [Fact]
+    public void ReissueRecoveryKey_invalidates_the_old_key()
+    {
+        var result = VaultService.Create(Master, Content(), Light);
+
+        var reissued = VaultService.ReissueRecoveryKey(result.Vault, Master);
+
+        Assert.Throws<InvalidRecoveryKeyException>(
+            () => VaultService.OpenWithRecoveryKey(reissued.Vault, result.RecoveryKey)); // 예전 키 무효
+    }
+
+    [Fact]
+    public void ReissueRecoveryKey_keeps_master_path_and_body()
+    {
+        var content = Content();
+        var result = VaultService.Create(Master, content, Light);
+
+        var reissued = VaultService.ReissueRecoveryKey(result.Vault, Master);
+
+        Assert.Equal(content, VaultService.OpenWithMaster(reissued.Vault, Master)); // 마스터 경로 유지
+        Assert.Equal(result.Vault.Ciphertext, reissued.Vault.Ciphertext);          // 본문 재암호화 없음
+        Assert.Equal(result.Vault.Header.DekByMaster, reissued.Vault.Header.DekByMaster); // 마스터 래핑 그대로
+    }
+
+    [Fact]
+    public void ReissueRecoveryKey_rejects_wrong_master_password()
+    {
+        var result = VaultService.Create(Master, Content(), Light);
+
+        Assert.Throws<InvalidMasterPasswordException>(
+            () => VaultService.ReissueRecoveryKey(result.Vault, "wrong password"));
+    }
 }

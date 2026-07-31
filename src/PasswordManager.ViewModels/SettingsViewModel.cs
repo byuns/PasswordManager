@@ -50,6 +50,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>마스터 비밀번호 변경 요청. 셸이 변경 화면을 연다.</summary>
     public event EventHandler? ChangeMasterRequested;
 
+    /// <summary>복구 키 재발급 요청. 셸이 재발급 화면을 연다(design 7.6).</summary>
+    public event EventHandler? ReissueRecoveryRequested;
+
     /// <summary>백업 요청. 뷰가 저장 위치 대화상자를 연다.</summary>
     public event EventHandler? BackupRequested;
 
@@ -78,6 +81,9 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private void ChangeMasterPassword() => ChangeMasterRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void ReissueRecovery() => ReissueRecoveryRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private void Backup() => BackupRequested?.Invoke(this, EventArgs.Empty);

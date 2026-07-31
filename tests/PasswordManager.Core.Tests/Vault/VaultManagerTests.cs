@@ -408,4 +408,51 @@ public class VaultManagerTests
         var h = Assert.Single(e.PasswordHistory);
         Assert.Equal("s3cr3t", h.Password);            // 이력 영속
     }
+
+    // --- 복구 키 재발급 (M5, design 7.6) ---
+
+    [Fact]
+    public void ReissueRecoveryKey_returns_new_code_that_recovers_and_keeps_session()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path, Light);
+        m.CreateNew(Master, Light);
+        m.Add(NewEntry("Steam"));
+
+        var newCode = m.ReissueRecoveryKey(Master);
+
+        Assert.False(string.IsNullOrWhiteSpace(newCode));
+        Assert.True(m.IsUnlocked);                       // 세션 유지
+        Assert.Equal("Steam", Assert.Single(m.Entries).Title);
+
+        // 새 복구 키로 재설정해 다른 매니저에서 열 수 있다.
+        var m2 = new VaultManager(store, Path, Light);
+        m2.Recover(newCode, "new master pw", Light);
+        Assert.Equal("Steam", Assert.Single(m2.Entries).Title);
+    }
+
+    [Fact]
+    public void ReissueRecoveryKey_invalidates_the_previous_code_and_persists()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path, Light);
+        var oldCode = RecoveryCode.Encode(m.CreateNew(Master, Light));
+        var savesAfterCreate = store.SaveCount;
+
+        m.ReissueRecoveryKey(Master);
+
+        Assert.True(store.SaveCount > savesAfterCreate);  // 재저장됨
+        var m2 = new VaultManager(store, Path, Light);
+        Assert.Throws<InvalidRecoveryKeyException>(() => m2.Recover(oldCode, "x", Light));
+    }
+
+    [Fact]
+    public void ReissueRecoveryKey_rejects_wrong_master_password()
+    {
+        var store = new InMemoryStore();
+        var m = new VaultManager(store, Path, Light);
+        m.CreateNew(Master, Light);
+
+        Assert.Throws<InvalidMasterPasswordException>(() => m.ReissueRecoveryKey("wrong"));
+    }
 }

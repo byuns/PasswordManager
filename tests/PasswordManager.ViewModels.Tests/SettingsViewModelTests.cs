@@ -51,6 +51,18 @@ public class SettingsViewModelTests
     }
 
     [Fact]
+    public void ReissueRecovery_raises_ReissueRecoveryRequested()
+    {
+        var vm = new SettingsViewModel(Unlocked());
+        var raised = false;
+        vm.ReissueRecoveryRequested += (_, _) => raised = true;
+
+        vm.ReissueRecoveryCommand.Execute(null);
+
+        Assert.True(raised);
+    }
+
+    [Fact]
     public void Backup_and_Restore_commands_raise_requests()
     {
         var vm = new SettingsViewModel(Unlocked());

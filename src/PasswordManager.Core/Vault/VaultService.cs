@@ -133,6 +133,22 @@ public static class VaultService
         return vault with { Header = newHeader };
     }
 
+    /// <summary>
+    /// 복구 키를 재발급한다(design 7.6). 현재 마스터 비밀번호로 DEK를 확보(겸 확인)하고 새 복구 키로
+    /// 다시 감싸 헤더의 복구 래핑만 교체한다. 마스터 래핑·본문은 그대로 유지하므로 세션은 이어진다.
+    /// 이전 복구 키는 무효화된다. 새 복구 키(바이트)를 함께 반환한다.
+    /// </summary>
+    public static VaultCreationResult ReissueRecoveryKey(EncryptedVault vault, string currentMasterPassword)
+    {
+        var dek = UnwrapDekWithMaster(vault.Header, currentMasterPassword); // 현재 비번 확인 겸 DEK 확보
+
+        var recoveryKey = RandomNumberGenerator.GetBytes(RecoveryKeySizeBytes);
+        var newDekByRecovery = KeyWrap.Wrap(recoveryKey, dek);
+
+        var newHeader = vault.Header with { DekByRecovery = newDekByRecovery };
+        return new VaultCreationResult(vault with { Header = newHeader }, recoveryKey);
+    }
+
     /// <summary>마스터 비밀번호를 바꾼다. DEK를 새 마스터키로 다시 감싸기만 하며 본문은 재암호화하지 않는다.</summary>
     public static EncryptedVault ChangeMasterPassword(
         EncryptedVault vault, string currentMasterPassword, string newMasterPassword, KdfParams newKdf)

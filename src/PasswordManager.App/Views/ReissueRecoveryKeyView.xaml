@@ -1,0 +1,72 @@
+<UserControl x:Class="PasswordManager.App.Views.ReissueRecoveryKeyView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:PasswordManager.ViewModels;assembly=PasswordManager.ViewModels"
+             d:DataContext="{d:DesignInstance vm:ReissueRecoveryKeyViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="FormScroll">
+    <Grid MinHeight="{Binding ViewportHeight, ElementName=FormScroll}">
+    <Border MaxWidth="560" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}" Padding="40">
+        <Grid>
+            <!-- 1단계: 현재 마스터 비밀번호 확인 -->
+            <StackPanel Visibility="{Binding RecoveryKeyDisplay, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}">
+                <ui:SymbolIcon Symbol="Key24" FontSize="48" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                               Margin="0,0,0,12" />
+                <ui:TextBlock FontTypography="Title" Text="복구 키 재발급" HorizontalAlignment="Center"
+                              Margin="0,0,0,12" />
+                <ui:TextBlock TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,20"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                              Text="새 복구 키를 발급하려면 현재 마스터 비밀번호를 확인하세요. 발급하면 이전 복구 키는 더 이상 쓸 수 없습니다." />
+
+                <ui:TextBlock Text="현재 마스터 비밀번호" Margin="0,0,0,4" />
+                <ui:PasswordBox x:Name="CurrentInput" PlaceholderText="현재 비밀번호"
+                                PasswordChanged="CurrentInput_PasswordChanged" />
+
+                <ui:TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                              Text="{Binding ErrorMessage}"
+                              Visibility="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToVisibility}}"
+                              TextWrapping="Wrap" Margin="0,8,0,0" />
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                    <ui:Button Content="취소" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
+                    <ui:Button Content="재발급" Appearance="Primary" IsDefault="True" Command="{Binding ReissueCommand}"
+                               IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                </StackPanel>
+                <ProgressBar IsIndeterminate="True" Margin="0,12,0,0"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <!-- 2단계: 새 복구 키 표시 및 보관 확인 -->
+            <StackPanel Visibility="{Binding RecoveryKeyDisplay, Converter={StaticResource StringNotEmptyToVisibility}}">
+                <ui:SymbolIcon Symbol="Key24" FontSize="48" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                               Margin="0,0,0,12" />
+                <ui:TextBlock FontTypography="Title" Text="새 복구 키를 안전하게 보관하세요"
+                              HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                              Margin="0,0,0,12" />
+                <ui:TextBlock TextWrapping="Wrap" Margin="0,0,0,16"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                              Text="이전 복구 키는 이제 무효입니다. 마스터 비밀번호를 잊으면 이 새 복구 키로만 볼트를 열 수 있습니다. 종이에 적어 오프라인에 보관하세요. 이 화면을 벗어나면 다시 볼 수 없습니다." />
+                <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                        CornerRadius="6" Padding="16">
+                    <ui:TextBlock FontFamily="Consolas" FontSize="16" TextWrapping="Wrap"
+                                  Text="{Binding RecoveryKeyDisplay}" />
+                </Border>
+                <CheckBox Content="새 복구 키를 안전한 곳에 보관했습니다." Margin="0,16,0,0"
+                          IsChecked="{Binding RecoveryKeySaved}" />
+                <ui:Button Content="완료" Appearance="Primary" HorizontalAlignment="Stretch"
+                           Margin="0,16,0,0" Command="{Binding AcknowledgeCommand}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+    </Grid>
+    </ScrollViewer>
+</UserControl>

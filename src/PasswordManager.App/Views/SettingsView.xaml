@@ -39,6 +39,18 @@
                 <ui:Button Content="변경" Command="{Binding ChangeMasterPasswordCommand}" />
             </ui:CardControl>
 
+            <ui:CardControl Icon="{ui:SymbolIcon KeyReset24}" Margin="0,0,0,8">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="복구 키 재발급" />
+                        <ui:TextBlock FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="새 복구 키를 발급하면 이전 복구 키는 더 이상 쓸 수 없습니다." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:Button Content="재발급" Command="{Binding ReissueRecoveryCommand}" />
+            </ui:CardControl>
+
             <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="{StaticResource CardCornerRadius}" Padding="16" Margin="0,0,0,8">

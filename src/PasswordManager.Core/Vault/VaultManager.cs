@@ -101,6 +101,23 @@ public sealed class VaultManager
         _store.Save(_path, _current);
     }
 
+    /// <summary>
+    /// 복구 키를 재발급한다(design 7.6). 현재 마스터 비번을 확인해 헤더의 복구 래핑만 새 복구 키로
+    /// 교체·저장한다. 세션·마스터 래핑·본문은 유지되며 이전 복구 키는 무효화된다. 사용자에게 1회 보여줄
+    /// 새 복구 키 문자열을 반환한다. 현재 비번이 틀리면 <see cref="InvalidMasterPasswordException"/>.
+    /// </summary>
+    public string ReissueRecoveryKey(string currentMasterPassword)
+    {
+        RequireUnlocked();
+        var result = VaultService.ReissueRecoveryKey(_current!, currentMasterPassword);
+        _current = result.Vault;
+        _store.Save(_path, _current);
+
+        var code = RecoveryCode.Encode(result.RecoveryKey);
+        MemoryHygiene.Clear(result.RecoveryKey); // 원본 복구 키 바이트 소거(design 5.5)
+        return code;
+    }
+
     /// <summary>앱 잠금해제 OTP가 등록되어 있는가(열람 게이트 사용 여부). design 5.4·TD-004.</summary>
     public bool HasOtp => RequireUnlocked().AppTotpSecret is not null;
 

@@ -178,6 +178,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _settings = new SettingsViewModel(_vault);
             _settings.OtpSetupRequested += OnOtpSetupRequested;
             _settings.ChangeMasterRequested += OnChangeMasterRequested;
+            _settings.ReissueRecoveryRequested += OnReissueRecoveryRequested;
             _settings.Locked += OnLocked; // 복원 시 세션이 닫히면 언락 화면으로
             _settings.TimeSettingsChanged += OnTimeSettingsChanged;
         }
@@ -325,6 +326,25 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             vm.Changed -= OnChangeMasterFinished;
             vm.Cancelled -= OnChangeMasterFinished;
+        }
+        ShowSettings(); // 설정에서 진입했으므로 설정으로 복귀
+    }
+
+    private void OnReissueRecoveryRequested(object? sender, EventArgs e)
+    {
+        var vm = new ReissueRecoveryKeyViewModel(_vault, _kdf);
+        vm.Completed += OnReissueRecoveryFinished;
+        vm.Cancelled += OnReissueRecoveryFinished;
+        CurrentViewModel = vm;
+        Section = null;
+    }
+
+    private void OnReissueRecoveryFinished(object? sender, EventArgs e)
+    {
+        if (sender is ReissueRecoveryKeyViewModel vm)
+        {
+            vm.Completed -= OnReissueRecoveryFinished;
+            vm.Cancelled -= OnReissueRecoveryFinished;
         }
         ShowSettings(); // 설정에서 진입했으므로 설정으로 복귀
     }
