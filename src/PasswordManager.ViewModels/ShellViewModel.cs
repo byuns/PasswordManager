@@ -139,6 +139,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnTimeSettingsChanged(object? sender, EventArgs e) => ApplyClipboardDelay();
 
+    /// <summary>슬랙·네트워크 설정 저장 → 세션 캐시(TD-037)를 새 값으로 갱신해 이후 알림에 반영.</summary>
+    private void OnNetworkSettingsChanged(object? sender, EventArgs e) => RefreshSlackConfig();
+
     private void StartCreate()
     {
         var vm = new CreateVaultViewModel(_vault, _kdf);
@@ -207,6 +210,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _settings.ReissueRecoveryRequested += OnReissueRecoveryRequested;
             _settings.Locked += OnLocked; // 복원 시 세션이 닫히면 언락 화면으로
             _settings.TimeSettingsChanged += OnTimeSettingsChanged;
+            _settings.NetworkSettingsChanged += OnNetworkSettingsChanged;
         }
         else
         {

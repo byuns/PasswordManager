@@ -180,4 +180,68 @@ public class SettingsViewModelTests
 
         Assert.True(vm.IsOtpRegistered);
     }
+
+    // --- 슬랙·네트워크 설정 (M6 S5, design 7.8·7.9) ---
+
+    [Fact]
+    public void Loads_network_and_slack_defaults_from_vault()
+    {
+        var vm = new SettingsViewModel(Unlocked());
+
+        Assert.False(vm.NetworkAllowed);   // 기본 오프라인
+        Assert.False(vm.SlackEnabled);     // 기본 OFF
+        Assert.Equal(PasswordManager.Core.Models.SlackSettings.DefaultTemplate, vm.MessageTemplate);
+    }
+
+    [Fact]
+    public void SaveSlackSettings_persists_and_raises_event()
+    {
+        var manager = Unlocked();
+        var vm = new SettingsViewModel(manager)
+        {
+            NetworkAllowed = true,
+            SlackEnabled = true,
+            SlackWebhookUrl = "  https://hooks.slack.com/services/x  ", // 트림 확인
+            IncludeSiteName = true,
+        };
+        var raised = false;
+        vm.NetworkSettingsChanged += (_, _) => raised = true;
+
+        vm.SaveSlackSettingsCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.True(manager.NetworkAllowed);
+        Assert.True(manager.Slack.Enabled);
+        Assert.Equal("https://hooks.slack.com/services/x", manager.Slack.WebhookUrl);
+        Assert.True(manager.Slack.IncludeSiteName);
+    }
+
+    [Fact]
+    public void ResetTemplate_restores_default()
+    {
+        var vm = new SettingsViewModel(Unlocked()) { MessageTemplate = "바뀐 문구" };
+
+        vm.ResetTemplateCommand.Execute(null);
+
+        Assert.Equal(PasswordManager.Core.Models.SlackSettings.DefaultTemplate, vm.MessageTemplate);
+    }
+
+    [Fact]
+    public void TemplatePreview_renders_event_label()
+    {
+        var vm = new SettingsViewModel(Unlocked()) { MessageTemplate = "{이벤트}!" };
+
+        Assert.Equal("잠금 해제됨!", vm.TemplatePreview);
+    }
+
+    [Fact]
+    public void Empty_template_saves_as_default()
+    {
+        var manager = Unlocked();
+        var vm = new SettingsViewModel(manager) { MessageTemplate = "   " };
+
+        vm.SaveSlackSettingsCommand.Execute(null);
+
+        Assert.Equal(PasswordManager.Core.Models.SlackSettings.DefaultTemplate, manager.Slack.MessageTemplate);
+    }
 }

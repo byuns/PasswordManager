@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PasswordManager.Core.Models;
+using PasswordManager.Core.Notifications;
 using PasswordManager.Core.Vault;
 
 namespace PasswordManager.ViewModels;
@@ -18,6 +20,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         _vault = vault;
         _autoLockMinutes = vault.AutoLockMinutes;
         _clipboardClearSeconds = vault.ClipboardClearSeconds;
+
+        // 슬랙·네트워크 설정을 볼트에서 로드(design 7.8·7.9).
+        var s = vault.Slack;
+        _networkAllowed = vault.NetworkAllowed;
+        _slackEnabled = s.Enabled;
+        _slackWebhookUrl = s.WebhookUrl;
+        _notifyUnlock = s.NotifyUnlock;
+        _notifyLoginFailure = s.NotifyLoginFailure;
+        _notifyPasswordChange = s.NotifyPasswordChange;
+        _notifySensitive = s.NotifySensitive;
+        _includeSiteName = s.IncludeSiteName;
+        _messageTemplate = s.MessageTemplate;
+        _deviceName = s.DeviceName ?? "";
     }
 
     /// <summary>사용자에게 보여줄 일시 안내(예: 백업 완료).</summary>
@@ -34,6 +49,61 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     /// <summary>시간 설정을 저장했을 때 발생. 셸이 구독해 실행 중인 자동잠금·클립보드에 즉시 반영한다.</summary>
     public event EventHandler? TimeSettingsChanged;
+
+    // --- 네트워크·슬랙 설정 (design 7.8·7.9·TD-012·TD-013) ---
+
+    /// <summary>전역 오프라인 스위치(기본 false=차단, TD-013). 이게 꺼져 있으면 슬랙 섹션은 비활성(회색).</summary>
+    [ObservableProperty]
+    private bool _networkAllowed;
+
+    /// <summary>슬랙 알림 옵트인(기본 OFF).</summary>
+    [ObservableProperty]
+    private bool _slackEnabled;
+
+    /// <summary>Slack Incoming Webhook URL(볼트 내 암호화 저장).</summary>
+    [ObservableProperty]
+    private string _slackWebhookUrl = "";
+
+    /// <summary>잠금 해제 성공 알림.</summary>
+    [ObservableProperty]
+    private bool _notifyUnlock;
+
+    /// <summary>로그인 실패 알림.</summary>
+    [ObservableProperty]
+    private bool _notifyLoginFailure;
+
+    /// <summary>비밀번호 추가·변경 알림.</summary>
+    [ObservableProperty]
+    private bool _notifyPasswordChange;
+
+    /// <summary>(선택) 마스터 변경·복구 키 사용 등 민감 이벤트 알림.</summary>
+    [ObservableProperty]
+    private bool _notifySensitive;
+
+    /// <summary>사이트명 포함 여부(기본 미포함).</summary>
+    [ObservableProperty]
+    private bool _includeSiteName;
+
+    /// <summary>알림 메시지 템플릿(허용 변수만 치환, TD-014).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TemplatePreview))]
+    private string _messageTemplate = SlackSettings.DefaultTemplate;
+
+    /// <summary>{기기명} 변수용 표시 이름(선택).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TemplatePreview))]
+    private string _deviceName = "";
+
+    /// <summary>미리보기용 고정 예시 시각(설정 화면 표시용, 실제 시각과 무관).</summary>
+    private static readonly DateTimeOffset PreviewTime = new(2026, 7, 31, 14, 3, 0, TimeSpan.FromHours(9));
+
+    /// <summary>현재 템플릿을 잠금 해제 이벤트·예시 값으로 렌더한 미리보기(TD-014).</summary>
+    public string TemplatePreview =>
+        SlackMessageTemplate.Render(MessageTemplate, SlackEvent.Unlock, PreviewTime,
+            string.IsNullOrWhiteSpace(DeviceName) ? null : DeviceName);
+
+    /// <summary>네트워크·슬랙 설정을 저장했을 때 발생. 셸이 구독해 세션 캐시(TD-037)를 갱신한다.</summary>
+    public event EventHandler? NetworkSettingsChanged;
 
     /// <summary>앱 잠금해제 OTP가 등록되어 있는가(상태 표시·재설정 안내용).</summary>
     public bool IsOtpRegistered => _vault.HasOtp;
@@ -107,6 +177,32 @@ public sealed partial class SettingsViewModel : ObservableObject
         StatusMessage = "시간 설정을 저장했습니다.";
         TimeSettingsChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>네트워크·슬랙 설정을 볼트에 저장하고, 세션 캐시 갱신을 알린다(design 7.8·TD-037).</summary>
+    [RelayCommand]
+    private void SaveSlackSettings()
+    {
+        var slack = new SlackSettings
+        {
+            Enabled = SlackEnabled,
+            WebhookUrl = SlackWebhookUrl?.Trim() ?? "",
+            NotifyUnlock = NotifyUnlock,
+            NotifyLoginFailure = NotifyLoginFailure,
+            NotifyPasswordChange = NotifyPasswordChange,
+            NotifySensitive = NotifySensitive,
+            IncludeSiteName = IncludeSiteName,
+            MessageTemplate = string.IsNullOrWhiteSpace(MessageTemplate)
+                ? SlackSettings.DefaultTemplate : MessageTemplate,
+            DeviceName = string.IsNullOrWhiteSpace(DeviceName) ? null : DeviceName.Trim(),
+        };
+        _vault.SaveNetworkSettings(NetworkAllowed, slack);
+        StatusMessage = "알림 설정을 저장했습니다.";
+        NetworkSettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>메시지 템플릿을 기본값으로 되돌린다(design 7.8). 저장은 별도 버튼으로.</summary>
+    [RelayCommand]
+    private void ResetTemplate() => MessageTemplate = SlackSettings.DefaultTemplate;
 
     /// <summary>현재 항목을 CSV(평문)로 만들어 돌려준다. 뷰가 경고 후 파일에 쓴다(design 7.7).</summary>
     public string BuildExportCsv() => _vault.ExportCsv();

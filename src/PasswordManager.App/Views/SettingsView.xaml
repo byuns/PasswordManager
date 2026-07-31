@@ -83,6 +83,76 @@
                 </StackPanel>
             </Border>
 
+            <!-- 알림 (네트워크·슬랙) -->
+            <ui:TextBlock FontTypography="BodyStrong" Text="알림"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="2,16,0,8" />
+
+            <ui:CardControl Icon="{ui:SymbolIcon Globe24}" Margin="0,0,0,8">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="네트워크 사용 허용" />
+                        <ui:TextBlock FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="기본은 오프라인(차단)입니다. 슬랙 알림을 쓰려면 먼저 켜세요." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch IsChecked="{Binding NetworkAllowed, Mode=TwoWay}" />
+            </ui:CardControl>
+
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="{StaticResource CardCornerRadius}" Padding="16" Margin="0,0,0,8"
+                    IsEnabled="{Binding NetworkAllowed}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Alert24" Margin="0,0,12,0" VerticalAlignment="Center" />
+                        <StackPanel VerticalAlignment="Center">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="슬랙 알림" />
+                            <ui:TextBlock FontTypography="Caption"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          Text="자리를 비운 사이 무단 접근을 폰으로 탐지합니다. 비밀번호는 전송되지 않습니다." />
+                        </StackPanel>
+                        <ui:ToggleSwitch IsChecked="{Binding SlackEnabled, Mode=TwoWay}"
+                                         HorizontalAlignment="Right" Margin="16,0,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,12,0,0" IsEnabled="{Binding SlackEnabled}">
+                        <ui:TextBlock FontTypography="Caption" Text="Webhook URL" Margin="0,0,0,2" />
+                        <ui:TextBox PlaceholderText="https://hooks.slack.com/services/..."
+                                    Text="{Binding SlackWebhookUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <ui:TextBlock FontTypography="Caption" Text="알림 이벤트" Margin="0,12,0,4" />
+                        <CheckBox Content="잠금 해제 성공" IsChecked="{Binding NotifyUnlock, Mode=TwoWay}" />
+                        <CheckBox Content="로그인 실패" IsChecked="{Binding NotifyLoginFailure, Mode=TwoWay}" />
+                        <CheckBox Content="비밀번호 추가·변경" IsChecked="{Binding NotifyPasswordChange, Mode=TwoWay}" />
+                        <CheckBox Content="민감 이벤트(마스터 변경·복구 키 재발급)" IsChecked="{Binding NotifySensitive, Mode=TwoWay}" />
+                        <CheckBox Content="사이트명 포함(기본 미포함)" Margin="0,4,0,0"
+                                  IsChecked="{Binding IncludeSiteName, Mode=TwoWay}" />
+
+                        <ui:TextBlock FontTypography="Caption" Text="메시지 템플릿 · 허용 변수 {이벤트} {시각} {기기명}"
+                                      Margin="0,12,0,2" />
+                        <ui:TextBox Text="{Binding MessageTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:TextBlock FontTypography="Caption" Text="기기명(선택, {기기명} 변수용)" Margin="0,8,0,2" />
+                        <ui:TextBox Text="{Binding DeviceName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <ui:TextBlock FontTypography="Caption" Text="미리보기" Margin="0,12,0,2"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                                CornerRadius="6" Padding="12">
+                            <ui:TextBlock Text="{Binding TemplatePreview}" TextWrapping="Wrap" />
+                        </Border>
+                    </StackPanel>
+
+                    <!-- 저장은 네트워크 허용 상태에서 항상 가능(슬랙 OFF로 두고 네트워크만 켜는 것도 저장 가능). -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <ui:Button Content="기본 템플릿" Command="{Binding ResetTemplateCommand}" Margin="0,0,8,0"
+                                   IsEnabled="{Binding SlackEnabled}" />
+                        <ui:Button Content="저장" Appearance="Primary" Command="{Binding SaveSlackSettingsCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- 데이터 -->
             <ui:TextBlock FontTypography="BodyStrong" Text="데이터"
                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="2,16,0,8" />
