@@ -56,8 +56,11 @@ public partial class App : Application
         var throttle = new LoginThrottle(FileLockoutStore.ForVault(vaultPath));
 
         // 슬랙 알림(옵트인·기본 OFF): 세션 캐시(A안) + HTTPS 전송기. 설정을 켜기 전엔 어떤 통신도 없음.
+        // 전송 최종 실패는 볼트 폴더 옆 slack-failures.log에 종류·시각만 남긴다(secret 배제, design 7.8).
         var slackCache = new SlackConfigCache();
-        var slack = new SlackNotifier(() => slackCache.Current, new HttpWebhookClient());
+        var slackLog = new FileSlackFailureLog(
+            Path.Combine(Path.GetDirectoryName(vaultPath)!, "slack-failures.log"));
+        var slack = new SlackNotifier(() => slackCache.Current, new HttpWebhookClient(), slackLog);
 
         var shell = new ShellViewModel(manager, clipboard: clipboard,
             appVersion: GetAppVersion(), vaultPath: vaultPath, throttle: throttle,
