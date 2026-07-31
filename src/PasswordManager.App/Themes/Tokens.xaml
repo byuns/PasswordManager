@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
     <!--
@@ -42,6 +43,80 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <!--
+        사이드 메뉴 항목 스타일 (섹션 느낌).
+        - 테두리·호버 배경을 없애 '버튼'이 아니라 '섹션 라벨'처럼 보이게 한다.
+        - 평소엔 보조 텍스트 색, 호버/포커스 시 기본 텍스트 색으로 밝아지고,
+          눌림 시 강조색으로 살짝 변화한다. 아이콘 색은 Foreground 상속으로 함께 바뀐다.
+        - 현재 보고 있는 섹션은 좌측 강조 바 + 옅은 배경 + 기본 텍스트 색으로 구분한다.
+          선택 여부는 Tag(bool)로 받는다 — ShellWindow에서 SectionActive 컨버터로 물린다.
+    -->
+    <Style x:Key="SidebarNavButtonStyle" TargetType="{x:Type ui:Button}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="8,7" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ui:Button}">
+                    <!-- 좌측 강조 바는 Padding 바깥(항목 맨 왼쪽)에 놓기 위해 Root와 형제로 겹쳐 그린다. -->
+                    <Grid>
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                TextElement.Foreground="{TemplateBinding Foreground}">
+                            <StackPanel Orientation="Horizontal"
+                                        Margin="{TemplateBinding Padding}"
+                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
+                                <ContentPresenter Content="{TemplateBinding Icon}"
+                                                  VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <ContentPresenter Content="{TemplateBinding Content}"
+                                                  VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="Indicator" Width="3" Height="16" CornerRadius="1.5"
+                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                Background="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                Visibility="Collapsed" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </Trigger>
+                        <!-- 현재 섹션: 좌측 바 + 옅은 배경 + 기본 텍스트 색.
+                             Tag는 object 타입이라 Value="True"면 문자열로 비교돼 절대 안 걸린다.
+                             sys:Boolean으로 명시해야 컨버터가 준 bool과 맞는다. -->
+                        <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}">
+                            <DataTrigger.Value>
+                                <sys:Boolean>True</sys:Boolean>
+                            </DataTrigger.Value>
+                            <Setter TargetName="Indicator" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </DataTrigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </ResourceDictionary>

@@ -44,22 +44,27 @@
                     BorderThickness="0,0,1,0"
                     Visibility="{Binding IsSidebarVisible, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel Margin="8">
+                    <!-- Tag = "이 항목이 현재 섹션인가"(bool). 스타일이 이걸 보고 선택 강조를 켠다. -->
                     <StackPanel>
                         <ui:Button Content="계정" Icon="{ui:SymbolIcon Key24}"
-                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                   Appearance="Transparent" Command="{Binding ShowItemsCommand}"
-                                   Margin="0,0,0,4" />
+                                   Style="{StaticResource SidebarNavButtonStyle}"
+                                   Command="{Binding ShowItemsCommand}"
+                                   Tag="{Binding Section, Converter={StaticResource SectionActive}, ConverterParameter=Items}"
+                                   Margin="0,0,0,2" />
                         <ui:Button Content="설정" Icon="{ui:SymbolIcon Settings24}"
-                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                   Appearance="Transparent" Command="{Binding ShowSettingsCommand}"
-                                   Margin="0,0,0,4" />
+                                   Style="{StaticResource SidebarNavButtonStyle}"
+                                   Command="{Binding ShowSettingsCommand}"
+                                   Tag="{Binding Section, Converter={StaticResource SectionActive}, ConverterParameter=Settings}"
+                                   Margin="0,0,0,2" />
                         <ui:Button Content="메뉴얼" Icon="{ui:SymbolIcon BookQuestionMark24}"
-                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                   Appearance="Transparent" Command="{Binding ShowManualCommand}"
-                                   Margin="0,0,0,4" />
+                                   Style="{StaticResource SidebarNavButtonStyle}"
+                                   Command="{Binding ShowManualCommand}"
+                                   Tag="{Binding Section, Converter={StaticResource SectionActive}, ConverterParameter=Manual}"
+                                   Margin="0,0,0,2" />
                         <ui:Button Content="정보" Icon="{ui:SymbolIcon Info24}"
-                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                   Appearance="Transparent" Command="{Binding ShowInfoCommand}" />
+                                   Style="{StaticResource SidebarNavButtonStyle}"
+                                   Command="{Binding ShowInfoCommand}"
+                                   Tag="{Binding Section, Converter={StaticResource SectionActive}, ConverterParameter=Info}" />
                     </StackPanel>
                 </DockPanel>
             </Border>
