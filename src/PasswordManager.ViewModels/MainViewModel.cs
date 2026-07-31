@@ -109,7 +109,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (query.Length > 0)
             source = source.Where(e =>
                 e.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                e.Login.Contains(query, StringComparison.OrdinalIgnoreCase));
+                e.Login.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                e.Tags.Any(t => t.Contains(query, StringComparison.OrdinalIgnoreCase)));
 
         // 선택 태그끼리는 OR(하나라도 달렸으면 통과), 검색어와는 AND로 결합(TD-029).
         if (SelectedTags.Count > 0)
@@ -144,10 +145,13 @@ public sealed partial class MainViewModel : ObservableObject
     /// 더 이상 존재하지 않는 태그는 <see cref="SelectedTags"/>에서 걷어낸다.</summary>
     private void RebuildAvailableTags()
     {
+        // 선택된 태그를 가장 좌측으로 모으고, 각 그룹(선택/미선택) 안에서는 사전순.
+        // 선택을 해제하면 다시 사전순 자리로 돌아온다(대칭).
         var tags = _vault.Entries
             .SelectMany(e => e.Tags)
             .Distinct(StringComparer.Ordinal)
-            .OrderBy(t => t, StringComparer.CurrentCulture)
+            .OrderByDescending(t => SelectedTags.Contains(t))
+            .ThenBy(t => t, StringComparer.CurrentCulture)
             .ToList();
 
         AvailableTags.Clear();

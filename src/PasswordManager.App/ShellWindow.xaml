@@ -64,7 +64,10 @@
                 </DockPanel>
             </Border>
 
-            <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" />
+            <!-- 화면(섹션·흐름) 전환 시 본문이 은은하게 fade-in (코드비하인드가 TargetUpdated에서 재생) -->
+            <ContentControl x:Name="MainContent" Grid.Column="1"
+                            Content="{Binding CurrentViewModel, NotifyOnTargetUpdated=True}"
+                            Binding.TargetUpdated="MainContent_TargetUpdated" />
         </Grid>
 
         <!-- 완료 토스트 호스트: 본문 위에 겹쳐 그린다(코드 비하인드가 서비스에 연결). -->

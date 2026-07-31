@@ -73,7 +73,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" PlaceholderText="검색 (사이트·아이디)"
+            <ui:TextBox Grid.Column="0" PlaceholderText="검색 (사이트·아이디·태그)"
                         Icon="{ui:SymbolIcon Search24}"
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
             <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Add24}" ToolTip="새 계정"
@@ -95,6 +95,14 @@
             <ScrollViewer x:Name="TagScroll" Grid.Column="0"
                           HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
                           PreviewMouseWheel="TagScroll_PreviewMouseWheel">
+                <!-- 오른쪽 끝을 살짝 투명하게(페이드) 해 "옆에 태그가 더 있음"을 암시(TD-030 가로 스크롤 어포던스) -->
+                <ScrollViewer.OpacityMask>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Offset="0" Color="Black" />
+                        <GradientStop Offset="0.92" Color="Black" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                </ScrollViewer.OpacityMask>
                 <ItemsControl ItemsSource="{Binding AvailableTags}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -133,18 +141,8 @@
                       Text="{Binding StatusMessage}" TextWrapping="Wrap"
                       Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}" />
 
-        <!-- 계정 카드 리스트 (design-ux §4). 최초로 열릴 때만 목록 영역이 은은하게 fade-in(필터/검색 갱신엔 재생 안 됨). -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0" Opacity="0">
-            <ScrollViewer.Triggers>
-                <EventTrigger RoutedEvent="Loaded">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                             From="0" To="1" Duration="0:0:0.25" />
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-            </ScrollViewer.Triggers>
+        <!-- 계정 카드 리스트 (design-ux §4). 화면 전환 fade는 셸(ContentControl)이 전담한다. -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
             <ItemsControl ItemsSource="{Binding Groups}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

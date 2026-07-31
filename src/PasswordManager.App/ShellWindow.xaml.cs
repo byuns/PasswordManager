@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using PasswordManager.App.Services;
 using PasswordManager.ViewModels;
@@ -82,6 +84,12 @@ public partial class ShellWindow : FluentWindow
         _confirmTcs = null;
         tcs?.TrySetResult(result);
     }
+
+    /// <summary>본문(CurrentViewModel) 전환 시 짧게 fade-in 한다. 뷰 재사용 여부와 무관하게
+    /// 바인딩 갱신(TargetUpdated)마다 재생돼, 섹션 이동·흐름 전환이 부드럽게 이어진다.</summary>
+    private void MainContent_TargetUpdated(object sender, DataTransferEventArgs e) =>
+        MainContent.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(0, 1, new Duration(TimeSpan.FromSeconds(0.18))));
 
     private void NotifyActivity() => _autoLock.NotifyActivity(DateTimeOffset.UtcNow);
 }

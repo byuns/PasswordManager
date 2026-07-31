@@ -420,6 +420,42 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void Selected_tag_moves_to_front_and_returns_to_place_when_cleared()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("A", "a", new[] { "work" }),
+            ("B", "b", new[] { "important" }),
+            ("C", "c", new[] { "shop" })));
+
+        // 기본: 사전순
+        Assert.Equal(new[] { "important", "shop", "work" }, vm.AvailableTags);
+
+        // 선택 → 가장 좌측으로, 나머지는 사전순 유지
+        vm.ToggleTagCommand.Execute("work");
+        Assert.Equal(new[] { "work", "important", "shop" }, vm.AvailableTags);
+
+        // 해제 → 원래(사전순) 자리로 복귀
+        vm.ToggleTagCommand.Execute("work");
+        Assert.Equal(new[] { "important", "shop", "work" }, vm.AvailableTags);
+    }
+
+    [Fact]
+    public void Multiple_selected_tags_sit_in_front_each_group_alphabetical()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("A", "a", new[] { "work" }),
+            ("B", "b", new[] { "important" }),
+            ("C", "c", new[] { "shop" }),
+            ("D", "d", new[] { "alpha" })));
+
+        vm.ToggleTagCommand.Execute("work");
+        vm.ToggleTagCommand.Execute("shop");
+
+        // 선택된 것(사전순: shop, work)이 앞, 미선택(alpha, important)이 뒤 사전순
+        Assert.Equal(new[] { "shop", "work", "alpha", "important" }, vm.AvailableTags);
+    }
+
+    [Fact]
     public void ToggleTag_filters_entries_by_that_tag()
     {
         var vm = new MainViewModel(UnlockedWithTagged(
@@ -447,6 +483,19 @@ public class MainViewModelTests
         Assert.Equal(2, vm.Entries.Count);
         Assert.Contains(vm.Entries, e => e.Title == "Steam");
         Assert.Contains(vm.Entries, e => e.Title == "Bank");
+    }
+
+    [Fact]
+    public void Search_also_matches_tags()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("Steam", "g", new[] { "game" }),
+            ("Bank", "b", new[] { "finance" })));
+
+        vm.SearchQuery = "game"; // 제목·아이디엔 없고 태그로만 매칭
+
+        Assert.Single(vm.Entries);
+        Assert.Equal("Steam", vm.Entries[0].Title);
     }
 
     [Fact]
