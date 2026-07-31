@@ -139,8 +139,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnTimeSettingsChanged(object? sender, EventArgs e) => ApplyClipboardDelay();
 
-    /// <summary>슬랙·네트워크 설정 저장 → 세션 캐시(TD-037)를 새 값으로 갱신해 이후 알림에 반영.</summary>
-    private void OnNetworkSettingsChanged(object? sender, EventArgs e) => RefreshSlackConfig();
+    /// <summary>슬랙·네트워크 설정 저장 → 세션 캐시(TD-037)를 갱신하고 저장 완료 토스트를 띄운다.</summary>
+    private void OnNetworkSettingsChanged(object? sender, EventArgs e)
+    {
+        RefreshSlackConfig();
+        Dialog?.Notify("저장됨", "알림 설정을 저장했습니다.");
+    }
 
     private void StartCreate()
     {
