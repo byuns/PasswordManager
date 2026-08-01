@@ -23,6 +23,10 @@ public static class VaultMigrator
         // v1 → v2 (M6 슬랙): NetworkAllowed·Slack은 순수 추가 필드라 구조 변환이 필요 없다.
         // 없는 필드는 역직렬화 기본값(NetworkAllowed=false, Slack=기본 OFF)이 흡수하므로 그대로 통과시킨다.
         [1] = root => root,
+
+        // v2 → v3 (즐겨찾기·최근 사용·휴지통, TD-040·TD-041): IsPinned·LastUsedAt·DeletedAt·SortOrder
+        // 모두 순수 추가 필드다. 기본값(고정 안 함 / 미사용 / 활성 / 이름순)이 곧 기존 동작이라 변환이 없다.
+        [2] = root => root,
     };
 
     /// <summary>root JSON을 <see cref="VaultData.CurrentVersion"/>까지 순차 변환하고 version을 정규화한다.</summary>

@@ -138,13 +138,26 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>복원으로 세션이 닫혔을 때 발생. 셸이 언락 화면으로 돌아간다.</summary>
     public event EventHandler? Locked;
 
+    /// <summary>휴지통 열기 요청(TD-041). 셸이 휴지통 화면을 연다.</summary>
+    public event EventHandler? TrashRequested;
+
+    /// <summary>휴지통에 든 계정 수(설정 버튼에 함께 보여준다).</summary>
+    public int TrashCount => _vault.DeletedEntries.Count;
+
+    /// <summary>휴지통 보관 기간(일). 설정 안내 문구에 쓴다.</summary>
+    public int TrashRetentionDays => VaultManager.TrashRetentionDays;
+
     /// <summary>OTP 등록 상태 등 볼트에서 읽는 값을 다시 반영한다(하위 화면에서 복귀 시).</summary>
     public void Refresh()
     {
         OnPropertyChanged(nameof(IsOtpRegistered));
         OnPropertyChanged(nameof(OtpStatusText));
         OnPropertyChanged(nameof(OtpActionLabel));
+        OnPropertyChanged(nameof(TrashCount)); // 휴지통에서 복원·비우기 후 복귀했을 수 있다
     }
+
+    [RelayCommand]
+    private void OpenTrash() => TrashRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private void SetupOtp() => OtpSetupRequested?.Invoke(this, EventArgs.Empty);

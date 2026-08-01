@@ -10,17 +10,27 @@ namespace PasswordManager.ViewModels;
 /// <summary>같은 사이트(제목)로 묶인 계정들의 그룹. 목록은 사이트별로 묶어 보여준다(TD-003 그룹 표시).</summary>
 public sealed class SiteGroup
 {
-    public SiteGroup(string siteName) => SiteName = siteName;
+    public SiteGroup(string siteName, bool isFavorites = false)
+    {
+        SiteName = siteName;
+        IsFavorites = isFavorites;
+    }
 
     /// <summary>그룹 헤더에 표시할 사이트명.</summary>
     public string SiteName { get; }
 
-    /// <summary>이 사이트에 속한 계정들(입력 순서 보존).</summary>
+    /// <summary>즐겨찾기 전용 그룹인가(TD-040). 사이트가 아니라 핀한 계정들을 모아 맨 위에 놓는다.</summary>
+    public bool IsFavorites { get; }
+
+    /// <summary>이 사이트에 속한 계정들.</summary>
     public ObservableCollection<VaultEntry> Accounts { get; } = new();
 
     /// <summary>계정이 둘 이상인지(뷰가 헤더 강조 등에 활용).</summary>
     public bool HasMultipleAccounts => Accounts.Count > 1;
 }
+
+/// <summary>정렬 드롭다운 한 줄(정렬 기준 + 표시 이름).</summary>
+public sealed record SortOption(EntrySortOrder Order, string Label);
 
 /// <summary>
 /// 언락 후 메인 화면 ViewModel. 항목 목록을 사이트별로 묶어 보여주고 제목·로그인으로 검색하며,
@@ -40,8 +50,17 @@ public sealed partial class MainViewModel : ObservableObject
         _copier = copier;
         _otpVerified = otpVerified ?? new HashSet<string>();
         _dialog = dialog;
+        _sortOrder = vault.SortOrder; // 볼트에 저장된 정렬 기준을 이어받는다(TD-040)
         Refresh();
     }
+
+    /// <summary>정렬 드롭다운에 채울 선택지(모든 정렬 기준 + 표시 이름).</summary>
+    public IReadOnlyList<SortOption> SortOptions { get; } = new[]
+    {
+        new SortOption(EntrySortOrder.Name, "이름순"),
+        new SortOption(EntrySortOrder.RecentlyChanged, "최근 변경순"),
+        new SortOption(EntrySortOrder.RecentlyUsed, "최근 사용순"),
+    };
 
     /// <summary>이번 세션에 OTP 게이트를 통과한 항목 ID들(셸과 공유). 메모 hover 미리보기를
     /// 이 집합에 든 항목에만 노출한다(열람·편집과 동일한 게이트, design 7.4).</summary>
@@ -68,15 +87,28 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _searchQuery = string.Empty;
 
+    /// <summary>키보드(↑/↓)·마우스로 고른 현재 행. 뷰는 이 값으로 선택 강조를 그리고,
+    /// 인자 없는 단축키 커맨드(Enter·Ctrl+B 등)의 대상이 된다.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteCommand))]
     [NotifyCanExecuteChangedFor(nameof(EditCommand))]
     [NotifyCanExecuteChangedFor(nameof(RevealCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopySelectedLoginCommand))]
     private VaultEntry? _selectedEntry;
 
     /// <summary>사용자에게 보여줄 일시 안내(예: OTP 미등록 시 열람 안내). design 5.4.</summary>
     [ObservableProperty]
     private string? _statusMessage;
+
+    /// <summary>계정 목록 정렬 기준(TD-040). 바꾸면 볼트에 저장돼 다음 실행에도 유지된다.</summary>
+    [ObservableProperty]
+    private EntrySortOrder _sortOrder;
+
+    partial void OnSortOrderChanged(EntrySortOrder value)
+    {
+        _vault.SetSortOrder(value);
+        Refresh();
+    }
 
     /// <summary>볼트가 잠겼을 때 발생. 셸이 구독해 언락 화면으로 돌아간다.</summary>
     public event EventHandler? Locked;
@@ -116,14 +148,27 @@ public sealed partial class MainViewModel : ObservableObject
         if (SelectedTags.Count > 0)
             source = source.Where(e => e.Tags.Any(SelectedTags.Contains));
 
-        var filtered = source.ToList();
+        var filtered = Sorted(source).ToList();
 
         Entries.Clear();
         foreach (var entry in filtered)
             Entries.Add(entry);
 
-        // 사이트명(대소문자 무시) 첫 등장 순서를 보존하며 그룹으로 묶는다.
         Groups.Clear();
+
+        // 즐겨찾기는 사이트와 무관하게 한 그룹으로 모아 맨 위에 둔다(TD-040).
+        // "바로가기"라 원래 사이트 그룹에서 빼지 않는다 — 아래에도 그대로 나온다.
+        // 검색·태그 필터를 통과한 것만 담기므로, 필터에 안 걸리면 이 그룹도 사라진다.
+        var pinned = filtered.Where(e => e.IsPinned).ToList();
+        if (pinned.Count > 0)
+        {
+            var favorites = new SiteGroup("즐겨찾기", isFavorites: true);
+            foreach (var entry in pinned)
+                favorites.Accounts.Add(entry);
+            Groups.Add(favorites);
+        }
+
+        // 이어서 사이트명(대소문자 무시)으로 묶는다. 정렬된 순서를 그대로 이어받는다.
         var index = new Dictionary<string, SiteGroup>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in filtered)
         {
@@ -136,10 +181,32 @@ public sealed partial class MainViewModel : ObservableObject
             group.Accounts.Add(entry);
         }
 
+        // 필터·삭제로 화면에서 사라진 항목이 선택된 채 남으면 단축키가 안 보이는 행을 건드리게 된다.
+        if (SelectedEntry is not null && !filtered.Contains(SelectedEntry))
+            SelectedEntry = null;
+
         // OTP 등록 상태가 바뀌었을 수 있으니(예: 등록 후 복귀) 행 버튼 전환용 플래그를 갱신 통지한다.
         OnPropertyChanged(nameof(HasOtp));
         OnPropertyChanged(nameof(RequiresOtpSetup));
     }
+
+    /// <summary>
+    /// 현재 정렬 기준으로 항목을 줄 세운다(TD-040). 그룹 순서는 이 순서를 이어받으므로,
+    /// 같은 사이트의 계정끼리도 같은 기준으로 정렬된다. 날짜가 없는 항목(쓴 적 없음)은 뒤로 민다.
+    /// </summary>
+    private IEnumerable<VaultEntry> Sorted(IEnumerable<VaultEntry> source) => SortOrder switch
+    {
+        EntrySortOrder.RecentlyChanged => source
+            .OrderByDescending(e => e.LastChangedAt)
+            .ThenBy(e => e.Title, StringComparer.CurrentCultureIgnoreCase),
+        EntrySortOrder.RecentlyUsed => source
+            .OrderByDescending(e => e.LastUsedAt.HasValue) // 한 번도 안 쓴 항목을 맨 뒤로
+            .ThenByDescending(e => e.LastUsedAt)
+            .ThenBy(e => e.Title, StringComparer.CurrentCultureIgnoreCase),
+        _ => source
+            .OrderBy(e => e.Title, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(e => e.Login, StringComparer.CurrentCultureIgnoreCase),
+    };
 
     /// <summary>전체 항목의 고유 태그로 <see cref="AvailableTags"/>를 다시 만들고,
     /// 더 이상 존재하지 않는 태그는 <see cref="SelectedTags"/>에서 걷어낸다.</summary>
@@ -183,6 +250,50 @@ public sealed partial class MainViewModel : ObservableObject
         Refresh();
     }
 
+    /// <summary>검색어와 태그 필터를 한 번에 되돌려 전체 목록으로 복귀한다(Esc).</summary>
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        SelectedTags.Clear();
+        // SearchQuery 세터가 Refresh를 부르지만, 이미 비어 있으면 안 불리므로 아래서 한 번 더 부른다.
+        SearchQuery = string.Empty;
+        Refresh();
+    }
+
+    /// <summary>목록에서 선택을 한 칸 이동한다(↑/↓). 끝에서는 순환하지 않고 머문다.</summary>
+    /// <param name="step">+1이면 다음, -1이면 이전.</param>
+    private void MoveSelection(int step)
+    {
+        if (Entries.Count == 0) return;
+
+        var current = SelectedEntry is null ? -1 : Entries.IndexOf(SelectedEntry);
+        if (current < 0)
+        {
+            // 선택이 없을 땐 진행 방향의 가장 가까운 끝에서 시작한다(↓=첫 항목, ↑=마지막 항목).
+            SelectedEntry = step > 0 ? Entries[0] : Entries[^1];
+            return;
+        }
+
+        var next = current + step;
+        if (next < 0 || next >= Entries.Count) return; // 양끝에서 정지
+        SelectedEntry = Entries[next];
+    }
+
+    /// <summary>다음 항목 선택(↓). 선택이 없으면 첫 항목.</summary>
+    [RelayCommand]
+    private void SelectNext() => MoveSelection(1);
+
+    /// <summary>이전 항목 선택(↑). 선택이 없으면 마지막 항목.</summary>
+    [RelayCommand]
+    private void SelectPrevious() => MoveSelection(-1);
+
+    /// <summary>선택 항목의 아이디를 복사한다(Ctrl+B). 비밀이 아니라 OTP 게이트 없이 바로.</summary>
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void CopySelectedLogin() => _copier?.Copy(SelectedEntry?.Login);
+
+    /// <summary>인자 없이 선택 항목만 대상으로 하는 단축키 커맨드의 실행 조건.</summary>
+    private bool HasSelection() => SelectedEntry is not null;
+
     /// <summary>
     /// 카드 액션 대상. 카드 버튼은 자기 항목을 인자로 넘기고(<paramref name="entry"/>),
     /// 인자가 없으면(예: 하단 공용 버튼) 선택 항목으로 폴백한다. design-ux §4.
@@ -196,12 +307,14 @@ public sealed partial class MainViewModel : ObservableObject
         if (target is null) return;
         // 실수 방지: 다이얼로그가 있으면 삭제 전 확인을 받는다(취소 시 아무것도 안 함).
         if (_dialog is not null && !await _dialog.ConfirmAsync(
-                "삭제 확인", $"‘{target.Title}’ 계정을 삭제할까요?\n삭제하면 되돌릴 수 없습니다.", "삭제", "취소"))
+                "삭제 확인",
+                $"‘{target.Title}’ 계정을 삭제할까요?\n휴지통으로 옮겨지며 {VaultManager.TrashRetentionDays}일 뒤 완전히 지워집니다.",
+                "삭제", "취소"))
             return;
         _vault.Remove(target.Id);
-        if (ReferenceEquals(target, SelectedEntry)) SelectedEntry = null;
-        Refresh();
-        _dialog?.Notify("삭제됨", "계정을 삭제했습니다.");
+        Refresh(); // 사라진 항목이 선택돼 있었다면 여기서 함께 해제된다
+
+        _dialog?.Notify("삭제됨", "휴지통으로 옮겼습니다. 설정 > 백업·데이터에서 되살릴 수 있습니다.");
     }
 
     [RelayCommand(CanExecute = nameof(CanActOn))]
@@ -235,6 +348,16 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
         VerifyRequested?.Invoke(this, target);
+    }
+
+    /// <summary>즐겨찾기 고정을 켜고 끈다(TD-040). 비밀 노출이 아니라 OTP 게이트를 거치지 않는다.</summary>
+    [RelayCommand]
+    private void TogglePin(VaultEntry? entry)
+    {
+        var target = entry ?? SelectedEntry;
+        if (target is null) return;
+        _vault.SetPinned(target.Id, !target.IsPinned);
+        Refresh();
     }
 
     [RelayCommand]

@@ -8,129 +8,137 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
     <UserControl.Resources>
-        <!-- 아이콘 배지: 옅은 원형 배경 + 강조색 아이콘 -->
+        <!-- 항목 아이콘 배지: 옅은 원형 배경 + 강조색 아이콘 -->
         <Style x:Key="ManualBadge" TargetType="Border">
-            <Setter Property="Width" Value="40" />
-            <Setter Property="Height" Value="40" />
-            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="CornerRadius" Value="18" />
             <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-            <Setter Property="Margin" Value="0,0,16,0" />
+            <Setter Property="Margin" Value="0,0,14,0" />
             <Setter Property="VerticalAlignment" Value="Top" />
         </Style>
         <Style x:Key="ManualIcon" TargetType="ui:SymbolIcon">
-            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontSize" Value="18" />
             <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-        <Style x:Key="ManualRow" TargetType="Grid">
-            <Setter Property="Margin" Value="0,0,0,18" />
         </Style>
         <Style x:Key="ManualDesc" TargetType="ui:TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Margin" Value="0,2,0,0" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         </Style>
+
+        <!-- 섹션 카드 머리: 작은 강조색 아이콘 + 제목 + 아래 구분선 -->
+        <Style x:Key="SectionHeaderIcon" TargetType="ui:SymbolIcon">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+
+        <!-- 키칩: 자판 키처럼 테두리 있는 작은 박스 -->
+        <Style x:Key="KeyCap" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="9,3" />
+            <Setter Property="Margin" Value="0,0,5,0" />
+            <Setter Property="MinWidth" Value="30" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- 안내 한 줄: 배지 + (제목 / 설명) -->
+        <DataTemplate x:Key="ManualItemTemplate" DataType="{x:Type vm:ManualItem}">
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
+                    <ui:SymbolIcon Style="{StaticResource ManualIcon}"
+                                   Symbol="{Binding Icon, Converter={StaticResource SymbolName}}" />
+                </Border>
+                <StackPanel Grid.Column="1">
+                    <ui:TextBlock FontTypography="BodyStrong" Text="{Binding Title}" />
+                    <ui:TextBlock Style="{StaticResource ManualDesc}" Text="{Binding Description}" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- 단축키 한 줄: 키칩들 + 설명 -->
+        <DataTemplate x:Key="ShortcutTemplate" DataType="{x:Type vm:ManualShortcut}">
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="130" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ItemsControl Grid.Column="0" ItemsSource="{Binding Keys}" VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource KeyCap}">
+                                <ui:TextBlock Text="{Binding}" FontSize="12" FontWeight="SemiBold"
+                                              HorizontalAlignment="Center"
+                                              Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ui:TextBlock Grid.Column="1" Text="{Binding Description}" VerticalAlignment="Center"
+                              TextWrapping="Wrap"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </DataTemplate>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="24" MaxWidth="640" HorizontalAlignment="Left">
+        <StackPanel Margin="24" MaxWidth="660" HorizontalAlignment="Left">
             <ui:TextBlock FontTypography="Title" Text="사용 안내" Margin="0,0,0,4" />
             <ui:TextBlock Text="비밀번호 매니저를 이렇게 씁니다." Margin="0,0,0,20"
                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
+            <!-- 주제별 섹션 카드 (시작하기 · 매일 쓰기 · 보안·복구) -->
+            <ItemsControl ItemsSource="{Binding Sections}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:ManualSection}">
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <ui:SymbolIcon Style="{StaticResource SectionHeaderIcon}"
+                                                   Symbol="{Binding Icon, Converter={StaticResource SymbolName}}" />
+                                    <ui:TextBlock FontTypography="Subtitle" Text="{Binding Title}" />
+                                </StackPanel>
+                                <Border Height="1" Margin="0,0,0,16"
+                                        Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                                <!-- 마지막 항목의 아래 여백은 카드 Padding과 겹치므로 음수 마진으로 상쇄 -->
+                                <ItemsControl ItemsSource="{Binding Items}" Margin="0,0,0,-16"
+                                              ItemTemplate="{StaticResource ManualItemTemplate}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- 단축키 카드 (계정 화면 기준, TD-039) -->
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <Grid Style="{StaticResource ManualRow}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
-                            <ui:SymbolIcon Symbol="Key24" Style="{StaticResource ManualIcon}" />
-                        </Border>
-                        <StackPanel Grid.Column="1">
-                            <ui:TextBlock FontTypography="BodyStrong" Text="계정 관리" />
-                            <ui:TextBlock Style="{StaticResource ManualDesc}"
-                                          Text="오른쪽 위 + 버튼으로 추가하고, 목록에서 계정을 눌러 편집·삭제합니다." />
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Style="{StaticResource ManualRow}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
-                            <ui:SymbolIcon Symbol="Eye24" Style="{StaticResource ManualIcon}" />
-                        </Border>
-                        <StackPanel Grid.Column="1">
-                            <ui:TextBlock FontTypography="BodyStrong" Text="비밀번호 보기" />
-                            <ui:TextBlock Style="{StaticResource ManualDesc}"
-                                          Text="열람·편집할 때 OTP(또는 마스터 비밀번호) 인증을 거쳐 안전하게 표시합니다." />
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Style="{StaticResource ManualRow}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
-                            <ui:SymbolIcon Symbol="Tag24" Style="{StaticResource ManualIcon}" />
-                        </Border>
-                        <StackPanel Grid.Column="1">
-                            <ui:TextBlock FontTypography="BodyStrong" Text="태그 필터" />
-                            <ui:TextBlock Style="{StaticResource ManualDesc}"
-                                          Text="상단 태그 칩으로 원하는 계정만 추립니다. 여러 개를 켜면 하나라도 맞는 계정을 보여줍니다." />
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Style="{StaticResource ManualRow}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
-                            <ui:SymbolIcon Symbol="LockClosed24" Style="{StaticResource ManualIcon}" />
-                        </Border>
-                        <StackPanel Grid.Column="1">
-                            <ui:TextBlock FontTypography="BodyStrong" Text="잠금" />
-                            <ui:TextBlock Style="{StaticResource ManualDesc}"
-                                          Text="왼쪽 위 잠금 버튼으로 즉시 잠그고, 일정 시간 쓰지 않으면 자동으로 잠깁니다." />
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Style="{StaticResource ManualRow}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
-                            <ui:SymbolIcon Symbol="Settings24" Style="{StaticResource ManualIcon}" />
-                        </Border>
-                        <StackPanel Grid.Column="1">
-                            <ui:TextBlock FontTypography="BodyStrong" Text="설정" />
-                            <ui:TextBlock Style="{StaticResource ManualDesc}"
-                                          Text="자동 잠금 시간, 클립보드 자동 삭제, 슬랙 알림 등을 조정합니다." />
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- 마지막 항목: 아래 여백 제거 -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Style="{StaticResource ManualBadge}">
-                            <ui:SymbolIcon Symbol="ShieldKeyhole24" Style="{StaticResource ManualIcon}" />
-                        </Border>
-                        <StackPanel Grid.Column="1">
-                            <ui:TextBlock FontTypography="BodyStrong" Text="복구 키" />
-                            <ui:TextBlock Style="{StaticResource ManualDesc}"
-                                          Text="마스터 비밀번호를 잊으면 복구 키로만 되살릴 수 있습니다. 안전한 곳에 따로 보관하세요." />
-                        </StackPanel>
-                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <ui:SymbolIcon Style="{StaticResource SectionHeaderIcon}" Symbol="Keyboard24" />
+                        <ui:TextBlock FontTypography="Subtitle" Text="단축키" />
+                    </StackPanel>
+                    <ui:TextBlock Margin="0,0,0,12" TextWrapping="Wrap"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="계정 목록 화면에서 씁니다. 비밀번호 복사 단축키는 인증 게이트를 건너뛰지 않도록 일부러 두지 않았습니다." />
+                    <Border Height="1" Margin="0,0,0,16"
+                            Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                    <ItemsControl ItemsSource="{Binding Shortcuts}" Margin="0,0,0,-10"
+                                  ItemTemplate="{StaticResource ShortcutTemplate}" />
                 </StackPanel>
             </Border>
         </StackPanel>

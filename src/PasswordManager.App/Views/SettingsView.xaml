@@ -205,6 +205,21 @@
                 <ui:Button Content="가져오기" Command="{Binding ImportCommand}" />
             </ui:CardControl>
 
+            <!-- 휴지통 (TD-041): 삭제한 계정을 되살리는 자리 -->
+            <ui:CardControl Icon="{ui:SymbolIcon Delete24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="휴지통" />
+                        <ui:TextBlock FontTypography="Caption"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            <Run Text="삭제한 계정 " /><Run Text="{Binding TrashCount, Mode=OneWay}" /><Run Text="개 · " />
+                            <Run Text="{Binding TrashRetentionDays, Mode=OneWay}" /><Run Text="일간 보관 후 자동 삭제" />
+                        </ui:TextBlock>
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:Button Content="열기" Command="{Binding OpenTrashCommand}" />
+            </ui:CardControl>
+
             <ui:TextBlock Margin="2,12,0,0"
                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                           Text="{Binding StatusMessage}" TextWrapping="Wrap"

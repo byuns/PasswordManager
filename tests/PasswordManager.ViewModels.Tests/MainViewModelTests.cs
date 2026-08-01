@@ -557,4 +557,307 @@ public class MainViewModelTests
         Assert.DoesNotContain("game", vm.SelectedTags);
         Assert.Single(vm.Entries); // 태그 필터가 걷혀 남은 Bank가 보인다
     }
+
+    // --- 키보드 내비게이션 (↑/↓ 이동, Esc 필터 해제, Ctrl+B 아이디 복사) ---
+
+    [Fact]
+    public void SelectNext_without_selection_picks_the_first_entry()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")));
+
+        vm.SelectNextCommand.Execute(null);
+
+        Assert.Same(vm.Entries[0], vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void SelectPrevious_without_selection_picks_the_last_entry()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")));
+
+        vm.SelectPreviousCommand.Execute(null);
+
+        Assert.Same(vm.Entries[^1], vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void SelectNext_and_previous_move_one_step_in_list_order()
+    {
+        var vm = new MainViewModel(UnlockedWith(("A", "a"), ("B", "b"), ("C", "c")));
+        vm.SelectedEntry = vm.Entries[0];
+
+        vm.SelectNextCommand.Execute(null);
+        Assert.Same(vm.Entries[1], vm.SelectedEntry);
+
+        vm.SelectPreviousCommand.Execute(null);
+        Assert.Same(vm.Entries[0], vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void Selection_stops_at_both_ends_without_wrapping()
+    {
+        var vm = new MainViewModel(UnlockedWith(("A", "a"), ("B", "b")));
+
+        vm.SelectedEntry = vm.Entries[^1];
+        vm.SelectNextCommand.Execute(null);
+        Assert.Same(vm.Entries[^1], vm.SelectedEntry); // 끝에서 순환하지 않고 머문다
+
+        vm.SelectedEntry = vm.Entries[0];
+        vm.SelectPreviousCommand.Execute(null);
+        Assert.Same(vm.Entries[0], vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void Selection_moves_within_the_filtered_list_only()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "player"), ("GitHub", "dev"), ("Google", "me")));
+        vm.SearchQuery = "g"; // GitHub·Google만 남음(Steam은 제목·아이디 모두 g가 없어 제외)
+
+        vm.SelectNextCommand.Execute(null);
+        Assert.Same(vm.Entries[0], vm.SelectedEntry);
+        vm.SelectNextCommand.Execute(null);
+        Assert.Same(vm.Entries[1], vm.SelectedEntry);
+
+        vm.SelectNextCommand.Execute(null); // 필터된 목록의 끝
+        Assert.Same(vm.Entries[1], vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void SelectNext_on_empty_list_keeps_selection_null()
+    {
+        var vm = new MainViewModel(UnlockedWith());
+
+        vm.SelectNextCommand.Execute(null);
+
+        Assert.Null(vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void Refresh_drops_selection_that_filter_hid()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")));
+        vm.SelectedEntry = vm.Entries.First(e => e.Title == "Steam");
+
+        vm.SearchQuery = "github"; // Steam이 목록에서 사라짐
+
+        Assert.Null(vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void Refresh_keeps_selection_that_still_matches()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")));
+        var steam = vm.Entries.First(e => e.Title == "Steam");
+        vm.SelectedEntry = steam;
+
+        vm.SearchQuery = "steam";
+
+        Assert.Same(steam, vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void ClearFilters_resets_search_and_tags()
+    {
+        var vm = new MainViewModel(UnlockedWithTagged(
+            ("Steam", "g", new[] { "game" }),
+            ("Bank", "b", new[] { "finance" })));
+        vm.ToggleTagCommand.Execute("game");
+        vm.SearchQuery = "steam";
+
+        vm.ClearFiltersCommand.Execute(null);
+
+        Assert.Equal("", vm.SearchQuery);
+        Assert.Empty(vm.SelectedTags);
+        Assert.Equal(2, vm.Entries.Count);
+    }
+
+    [Fact]
+    public void CopySelectedLogin_copies_the_selected_entrys_login()
+    {
+        var clip = new FakeClipboard();
+        var copier = new ClipboardCopier(clip, new NoopScheduler());
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer"), ("GitHub", "dev")), copier);
+        vm.SelectedEntry = vm.Entries.First(e => e.Title == "GitHub");
+
+        vm.CopySelectedLoginCommand.Execute(null);
+
+        Assert.Equal("dev", clip.Text);
+    }
+
+    [Fact]
+    public void CopySelectedLogin_disabled_without_selection()
+    {
+        var clip = new FakeClipboard();
+        var copier = new ClipboardCopier(clip, new NoopScheduler());
+        var vm = new MainViewModel(UnlockedWith(("Steam", "gamer")), copier);
+
+        Assert.False(vm.CopySelectedLoginCommand.CanExecute(null));
+
+        vm.SelectedEntry = vm.Entries[0];
+        Assert.True(vm.CopySelectedLoginCommand.CanExecute(null));
+    }
+
+    // --- 즐겨찾기(핀) 그룹 (TD-040) ---
+
+    [Fact]
+    public void Pinned_accounts_appear_in_a_favorites_group_at_the_top()
+    {
+        var manager = UnlockedWith(("Steam", "main"), ("Steam", "sub"), ("GitHub", "dev"));
+        var vm = new MainViewModel(manager);
+        var main = vm.Entries.First(e => e.Login == "main");
+
+        vm.TogglePinCommand.Execute(main);
+
+        Assert.True(vm.Groups[0].IsFavorites);
+        Assert.Equal(new[] { "main" }, vm.Groups[0].Accounts.Select(a => a.Login));
+    }
+
+    [Fact]
+    public void Pinned_account_also_stays_in_its_own_site_group()
+    {
+        var manager = UnlockedWith(("Steam", "main"), ("Steam", "sub"));
+        var vm = new MainViewModel(manager);
+
+        vm.TogglePinCommand.Execute(vm.Entries.First(e => e.Login == "main"));
+
+        // 즐겨찾기는 "바로가기"라 원래 자리에서 사라지지 않는다(TD-040 조정).
+        var steam = vm.Groups.First(g => g.SiteName == "Steam");
+        Assert.Equal(new[] { "main", "sub" }, steam.Accounts.Select(a => a.Login));
+    }
+
+    [Fact]
+    public void TogglePin_twice_returns_the_account_to_its_site_group()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "main")));
+        var main = vm.Entries[0];
+
+        vm.TogglePinCommand.Execute(main);
+        Assert.True(vm.Groups[0].IsFavorites);
+
+        vm.TogglePinCommand.Execute(vm.Entries.First(e => e.Login == "main"));
+
+        Assert.DoesNotContain(vm.Groups, g => g.IsFavorites);
+        Assert.Equal("Steam", vm.Groups[0].SiteName);
+        Assert.Single(vm.Groups); // 즐겨찾기 그룹만 사라지고 사이트 그룹은 그대로
+    }
+
+    [Fact]
+    public void Favorites_group_is_absent_when_nothing_is_pinned()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "main")));
+
+        Assert.DoesNotContain(vm.Groups, g => g.IsFavorites);
+    }
+
+    [Fact]
+    public void Pin_survives_refresh_because_it_is_stored_in_the_vault()
+    {
+        var manager = UnlockedWith(("Steam", "main"));
+        var vm = new MainViewModel(manager);
+        vm.TogglePinCommand.Execute(vm.Entries[0]);
+
+        vm.Refresh();
+
+        Assert.True(vm.Groups[0].IsFavorites);
+        Assert.True(manager.Entries[0].IsPinned);
+    }
+
+    [Fact]
+    public void Favorites_group_still_respects_the_search_filter()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "main"), ("GitHub", "dev")));
+        vm.TogglePinCommand.Execute(vm.Entries.First(e => e.Title == "Steam"));
+
+        vm.SearchQuery = "github";
+
+        Assert.DoesNotContain(vm.Groups, g => g.IsFavorites); // 검색에 안 걸린 즐겨찾기는 숨는다
+        Assert.Single(vm.Groups);
+    }
+
+    // --- 정렬 (TD-040) ---
+
+    [Fact]
+    public void Default_sort_is_by_name()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Zulu", "z"), ("Alpha", "a"), ("Mike", "m")));
+
+        Assert.Equal(EntrySortOrder.Name, vm.SortOrder);
+        Assert.Equal(new[] { "Alpha", "Mike", "Zulu" }, vm.Groups.Select(g => g.SiteName));
+    }
+
+    [Fact]
+    public void Sorting_by_recently_used_puts_the_latest_first_and_unused_last()
+    {
+        var manager = UnlockedWith(("Alpha", "a"), ("Bravo", "b"), ("Charlie", "c"));
+        var vm = new MainViewModel(manager);
+        var alpha = vm.Entries.First(e => e.Title == "Alpha");
+        var charlie = vm.Entries.First(e => e.Title == "Charlie");
+        manager.MarkUsed(alpha.Id, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        manager.MarkUsed(charlie.Id, new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero));
+
+        vm.SortOrder = EntrySortOrder.RecentlyUsed;
+
+        // Charlie(5월) → Alpha(1월) → Bravo(쓴 적 없음)
+        Assert.Equal(new[] { "Charlie", "Alpha", "Bravo" }, vm.Groups.Select(g => g.SiteName));
+    }
+
+    [Fact]
+    public void Sort_order_is_saved_to_the_vault()
+    {
+        var manager = UnlockedWith(("Steam", "gamer"));
+        var vm = new MainViewModel(manager);
+
+        vm.SortOrder = EntrySortOrder.RecentlyChanged;
+
+        Assert.Equal(EntrySortOrder.RecentlyChanged, manager.SortOrder);
+    }
+
+    [Fact]
+    public void Sort_order_is_read_from_the_vault_on_construction()
+    {
+        var manager = UnlockedWith(("Steam", "gamer"));
+        manager.SetSortOrder(EntrySortOrder.RecentlyUsed);
+
+        var vm = new MainViewModel(manager);
+
+        Assert.Equal(EntrySortOrder.RecentlyUsed, vm.SortOrder);
+    }
+
+    [Fact]
+    public void Favorites_group_stays_on_top_regardless_of_sort_order()
+    {
+        var manager = UnlockedWith(("Zulu", "z"), ("Alpha", "a"));
+        var vm = new MainViewModel(manager);
+        vm.TogglePinCommand.Execute(vm.Entries.First(e => e.Title == "Zulu"));
+
+        vm.SortOrder = EntrySortOrder.Name; // 이름순이면 Alpha가 먼저여야 하지만
+
+        Assert.True(vm.Groups[0].IsFavorites); // 즐겨찾기가 항상 맨 위
+        Assert.Equal("Alpha", vm.Groups[1].SiteName);
+    }
+
+    [Fact]
+    public void Sort_options_cover_every_order_with_labels()
+    {
+        var vm = new MainViewModel(UnlockedWith());
+
+        Assert.Equal(
+            Enum.GetValues<EntrySortOrder>(),
+            vm.SortOptions.Select(o => o.Order));
+        Assert.All(vm.SortOptions, o => Assert.False(string.IsNullOrWhiteSpace(o.Label)));
+    }
+
+    // --- 삭제는 휴지통으로 (TD-041) ---
+
+    [Fact]
+    public void Delete_moves_the_entry_to_the_trash()
+    {
+        var manager = UnlockedWith(("Steam", "gamer"));
+        var vm = new MainViewModel(manager);
+
+        vm.DeleteCommand.Execute(vm.Entries[0]);
+
+        Assert.Empty(vm.Entries);
+        Assert.Single(manager.DeletedEntries); // 영구 삭제가 아니라 되살릴 수 있다
+    }
 }

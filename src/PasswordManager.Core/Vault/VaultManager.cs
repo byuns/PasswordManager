@@ -32,8 +32,16 @@ public sealed class VaultManager
     /// <summary>파일이 이미 존재하는가(첫 실행 여부 판단).</summary>
     public bool Exists() => _store.Exists(_path);
 
-    /// <summary>현재 볼트의 항목들(읽기 전용 스냅샷 뷰).</summary>
-    public IReadOnlyList<VaultEntry> Entries => RequireUnlocked().Entries;
+    /// <summary>현재 볼트의 활성 항목들(휴지통에 든 것은 제외, TD-041).</summary>
+    public IReadOnlyList<VaultEntry> Entries =>
+        RequireUnlocked().Entries.Where(e => e.DeletedAt is null).ToList();
+
+    /// <summary>휴지통에 든 항목들(최근 삭제 순, TD-041).</summary>
+    public IReadOnlyList<VaultEntry> DeletedEntries =>
+        RequireUnlocked().Entries
+            .Where(e => e.DeletedAt is not null)
+            .OrderByDescending(e => e.DeletedAt!.Value)
+            .ToList();
 
     /// <summary>새 볼트를 만들어 저장하고 세션을 연다. 최초 1회 보여줄 복구 키를 반환한다(TD-010).</summary>
     public byte[] CreateNew(string masterPassword, KdfParams kdf)
@@ -69,6 +77,9 @@ public sealed class VaultManager
         }
 
         _current = vault;
+
+        // 보관 기간을 넘긴 휴지통 항목을 이 시점에 정리한다(TD-041).
+        PurgeExpiredTrash(DateTimeOffset.UtcNow);
     }
 
     /// <summary>
@@ -175,8 +186,9 @@ public sealed class VaultManager
         _current = null;
     }
 
-    /// <summary>id로 항목을 찾는다(없으면 null).</summary>
-    public VaultEntry? Get(string id) => RequireUnlocked().Entries.FirstOrDefault(e => e.Id == id);
+    /// <summary>id로 활성 항목을 찾는다(없거나 휴지통에 있으면 null).</summary>
+    public VaultEntry? Get(string id) =>
+        RequireUnlocked().Entries.FirstOrDefault(e => e.Id == id && e.DeletedAt is null);
 
     /// <summary>새 항목을 추가한다. 생성/수정/마지막변경 시각을 찍고 저장한다.</summary>
     public void Add(VaultEntry entry)
@@ -213,6 +225,12 @@ public sealed class VaultManager
         // 생성시각과 이력은 앱이 권한을 갖는 필드 — 기존 항목 값을 이어받는다.
         entry.CreatedAt = existing.CreatedAt;
         entry.PasswordHistory = existing.PasswordHistory;
+
+        // 즐겨찾기·최근 사용·휴지통 상태도 편집 폼이 다루지 않는 앱 소유 필드다.
+        // 편집 화면은 폼 값으로 새 VaultEntry를 만들어 넘기므로, 이어받지 않으면 조용히 초기화된다.
+        entry.IsPinned = existing.IsPinned;
+        entry.LastUsedAt = existing.LastUsedAt;
+        entry.DeletedAt = existing.DeletedAt;
 
         if (entry.Password != existing.Password)
         {
@@ -282,8 +300,8 @@ public sealed class VaultManager
         Persist();
     }
 
-    /// <summary>현재 항목들을 자체 CSV(평문)로 내보낸다. 호출부가 강한 경고를 거쳐야 한다(design 7.7).</summary>
-    public string ExportCsv() => CsvVault.Export(RequireUnlocked().Entries);
+    /// <summary>활성 항목들을 자체 CSV(평문)로 내보낸다(휴지통 제외). 호출부가 강한 경고를 거쳐야 한다(design 7.7).</summary>
+    public string ExportCsv() => CsvVault.Export(Entries);
 
     /// <summary>
     /// CSV에서 항목을 읽어 모두 새 항목으로 추가하고 저장한다(중복 검사 없이 append). 추가한 개수를 돌려준다.
@@ -306,11 +324,96 @@ public sealed class VaultManager
         return imported.Count;
     }
 
-    /// <summary>id로 항목을 삭제하고 저장한다.</summary>
-    public void Remove(string id)
+    /// <summary>휴지통 보관 기간(일). 이 기간을 넘긴 항목은 언락 시 자동으로 영구 삭제된다(TD-041).</summary>
+    public const int TrashRetentionDays = 30;
+
+    /// <summary>id로 항목을 휴지통에 넣고 저장한다(소프트 삭제, TD-041).</summary>
+    public void Remove(string id) => Remove(id, DateTimeOffset.UtcNow);
+
+    /// <summary>id로 항목을 휴지통에 넣는다. now는 테스트에서 시각 고정용.</summary>
+    public void Remove(string id, DateTimeOffset now)
     {
         var data = RequireUnlocked();
-        data.Entries.RemoveAll(e => e.Id == id);
+        var entry = data.Entries.FirstOrDefault(e => e.Id == id && e.DeletedAt is null);
+        if (entry is null) return;
+
+        entry.DeletedAt = now;
+        entry.IsPinned = false; // 휴지통 항목이 즐겨찾기에 남아 있으면 안 된다
+        Persist();
+    }
+
+    /// <summary>휴지통의 항목을 되살린다(TD-041). 없으면 아무것도 하지 않는다.</summary>
+    public void RestoreEntry(string id)
+    {
+        var data = RequireUnlocked();
+        var entry = data.Entries.FirstOrDefault(e => e.Id == id && e.DeletedAt is not null);
+        if (entry is null) return;
+
+        entry.DeletedAt = null;
+        Persist();
+    }
+
+    /// <summary>휴지통의 항목을 영구 삭제한다(TD-041). 활성 항목은 건드리지 않는다.</summary>
+    public void PurgeEntry(string id)
+    {
+        var data = RequireUnlocked();
+        if (data.Entries.RemoveAll(e => e.Id == id && e.DeletedAt is not null) > 0)
+            Persist();
+    }
+
+    /// <summary>휴지통을 비운다(영구 삭제). 활성 항목은 그대로 둔다(TD-041).</summary>
+    public void EmptyTrash()
+    {
+        var data = RequireUnlocked();
+        if (data.Entries.RemoveAll(e => e.DeletedAt is not null) > 0)
+            Persist();
+    }
+
+    /// <summary>
+    /// 보관 기간(<see cref="TrashRetentionDays"/>)을 넘긴 휴지통 항목을 영구 삭제하고 개수를 돌려준다.
+    /// 언락 시 자동 호출된다. 경계(정확히 30일째)는 아직 남긴다 — 초과분만 지운다.
+    /// </summary>
+    public int PurgeExpiredTrash(DateTimeOffset now)
+    {
+        var data = RequireUnlocked();
+        var cutoff = now.AddDays(-TrashRetentionDays);
+        var purged = data.Entries.RemoveAll(e => e.DeletedAt is { } deleted && deleted < cutoff);
+        if (purged > 0) Persist();
+        return purged;
+    }
+
+    /// <summary>항목의 즐겨찾기 고정을 켜거나 끈다(TD-040). 비밀 노출이 아니라 OTP 게이트 없이 호출된다.</summary>
+    public void SetPinned(string id, bool pinned)
+    {
+        var data = RequireUnlocked();
+        var entry = data.Entries.FirstOrDefault(e => e.Id == id && e.DeletedAt is null);
+        if (entry is null || entry.IsPinned == pinned) return;
+
+        entry.IsPinned = pinned;
+        Persist();
+    }
+
+    /// <summary>항목을 "지금 썼다"고 기록한다(OTP 인증 통과 시점, TD-040). "최근 사용순" 정렬의 기준.</summary>
+    public void MarkUsed(string id, DateTimeOffset now)
+    {
+        var data = RequireUnlocked();
+        var entry = data.Entries.FirstOrDefault(e => e.Id == id && e.DeletedAt is null);
+        if (entry is null) return;
+
+        entry.LastUsedAt = now;
+        Persist();
+    }
+
+    /// <summary>계정 목록 정렬 기준(기본 이름순, TD-040).</summary>
+    public EntrySortOrder SortOrder => RequireUnlocked().SortOrder;
+
+    /// <summary>정렬 기준을 저장한다 — 다음 실행에도 유지된다(TD-040).</summary>
+    public void SetSortOrder(EntrySortOrder order)
+    {
+        var data = RequireUnlocked();
+        if (data.SortOrder == order) return;
+
+        data.SortOrder = order;
         Persist();
     }
 

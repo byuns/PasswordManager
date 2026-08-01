@@ -51,17 +51,55 @@ public class VaultMigrationTests
     // --- v1 → v2 (M6 슬랙·네트워크) ---
 
     [Fact]
-    public void V1_vault_migrates_to_v2_with_offline_and_slack_off_defaults()
+    public void V1_vault_migrates_with_offline_and_slack_off_defaults()
     {
-        // 슬랙·네트워크 필드가 없던 v1 볼트 → v2로 정규화되며 기본값(오프라인·슬랙 OFF)이 채워진다.
+        // 슬랙·네트워크 필드가 없던 v1 볼트 → 최신 버전으로 정규화되며 기본값(오프라인·슬랙 OFF)이 채워진다.
         var json = """{"version":1,"entries":[]}""";
 
         var data = VaultJson.Deserialize(json);
 
-        Assert.Equal(2, data.Version);
+        Assert.Equal(VaultData.CurrentVersion, data.Version);
         Assert.False(data.NetworkAllowed);          // 전역 차단이 기본(TD-013)
         Assert.False(data.Slack.Enabled);           // 슬랙 옵트인 OFF가 기본(TD-012)
         Assert.Equal(SlackSettings.DefaultTemplate, data.Slack.MessageTemplate);
+    }
+
+    // --- v2 → v3 (즐겨찾기·최근 사용·휴지통, TD-040·TD-041) ---
+
+    [Fact]
+    public void V2_vault_migrates_to_v3_with_pin_trash_and_sort_defaults()
+    {
+        // v2엔 isPinned·lastUsedAt·deletedAt·sortOrder가 없다 → 기본값이 곧 기존 동작이어야 한다.
+        var json = """{"version":2,"entries":[{"title":"Steam","password":"pw"}]}""";
+
+        var data = VaultJson.Deserialize(json);
+        var entry = Assert.Single(data.Entries);
+
+        Assert.Equal(VaultData.CurrentVersion, data.Version);
+        Assert.False(entry.IsPinned);                       // 고정 안 함
+        Assert.Null(entry.LastUsedAt);                      // 쓴 적 없음
+        Assert.Null(entry.DeletedAt);                       // 활성(휴지통 아님)
+        Assert.Equal(EntrySortOrder.Name, data.SortOrder);  // 이름순이 기본
+    }
+
+    [Fact]
+    public void Pin_last_used_and_trash_state_roundtrip_through_serialization()
+    {
+        var used = new DateTimeOffset(2026, 3, 4, 5, 6, 7, TimeSpan.Zero);
+        var deleted = new DateTimeOffset(2026, 5, 6, 7, 8, 9, TimeSpan.Zero);
+        var data = new VaultData { SortOrder = EntrySortOrder.RecentlyUsed };
+        data.Entries.Add(new VaultEntry
+        {
+            Title = "Steam", Password = "pw", IsPinned = true, LastUsedAt = used, DeletedAt = deleted,
+        });
+
+        var back = VaultJson.Deserialize(VaultJson.Serialize(data));
+        var entry = Assert.Single(back.Entries);
+
+        Assert.Equal(EntrySortOrder.RecentlyUsed, back.SortOrder);
+        Assert.True(entry.IsPinned);
+        Assert.Equal(used, entry.LastUsedAt);
+        Assert.Equal(deleted, entry.DeletedAt);
     }
 
     [Fact]

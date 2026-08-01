@@ -218,6 +218,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _settings.Locked += OnLocked; // 복원 시 세션이 닫히면 언락 화면으로
             _settings.TimeSettingsChanged += OnTimeSettingsChanged;
             _settings.NetworkSettingsChanged += OnNetworkSettingsChanged;
+            _settings.TrashRequested += OnTrashRequested;
         }
         else
         {
@@ -225,6 +226,20 @@ public sealed partial class ShellViewModel : ObservableObject
         }
         CurrentViewModel = _settings;
         Section = ShellSection.Settings;
+    }
+
+    /// <summary>휴지통 화면을 연다(설정 > 백업·데이터에서 진입, TD-041). 닫으면 설정으로 돌아간다.</summary>
+    private void OnTrashRequested(object? sender, EventArgs e)
+    {
+        var trash = new TrashViewModel(_vault, Dialog);
+        void OnClosed(object? s, EventArgs args)
+        {
+            trash.Closed -= OnClosed;
+            ShowSettings(); // 복원·비우기 결과가 설정의 휴지통 개수에 반영된다
+        }
+        trash.Closed += OnClosed;
+        CurrentViewModel = trash;
+        Section = null; // 하위 흐름 — 사이드바를 숨긴다
     }
 
     /// <summary>정보 섹션으로 이동한다.</summary>
@@ -299,6 +314,7 @@ public sealed partial class ShellViewModel : ObservableObject
             gate.Verified -= OnVerified;
             gate.Cancelled -= OnCancelled;
             _otpVerified.Add(entry.Id);
+            _vault.MarkUsed(entry.Id, DateTimeOffset.UtcNow); // 편집도 "이 계정을 쓴" 것으로 본다(TD-040)
             ShowEditor(new EntryEditViewModel(_vault, entry));
         }
         void OnCancelled(object? s, EventArgs e)
@@ -335,6 +351,7 @@ public sealed partial class ShellViewModel : ObservableObject
             gate.Verified -= OnVerified;
             gate.Cancelled -= OnCancelled;
             _otpVerified.Add(entry.Id); // 세션 그레이스: 이 항목의 보기·편집·삭제가 열린다
+            _vault.MarkUsed(entry.Id, DateTimeOffset.UtcNow); // "최근 사용순" 정렬 기준(TD-040)
             ShowMain();
         }
         void OnCancelled(object? s, EventArgs e)

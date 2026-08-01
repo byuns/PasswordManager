@@ -1,5 +1,8 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PasswordManager.Core.Models;
+using PasswordManager.ViewModels;
 
 namespace PasswordManager.App.Views;
 
@@ -16,5 +19,25 @@ public partial class MainView : UserControl
     {
         TagScroll.ScrollToHorizontalOffset(TagScroll.HorizontalOffset - e.Delta);
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// 화면에 들어오면 검색창에 포커스를 준다. 바로 타이핑할 수 있을 뿐 아니라,
+    /// UserControl.InputBindings는 포커스가 이 화면 안에 있어야 발동하므로 단축키의 전제이기도 하다.
+    /// </summary>
+    private void MainView_Loaded(object sender, RoutedEventArgs e) => SearchBox.Focus();
+
+    /// <summary>Ctrl+F: 검색창으로 포커스를 옮기고 기존 검색어를 통째로 선택해 바로 덮어쓸 수 있게 한다.</summary>
+    private void FocusSearch_Executed(object sender, ExecutedRoutedEventArgs e)
+    {
+        SearchBox.Focus();
+        SearchBox.SelectAll();
+    }
+
+    /// <summary>행 아무 곳이나 누르면 그 계정을 선택한다(키보드 ↑↓ 선택과 같은 상태를 공유).</summary>
+    private void AccountRow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is MainViewModel vm && sender is FrameworkElement { DataContext: VaultEntry entry })
+            vm.SelectedEntry = entry;
     }
 }
