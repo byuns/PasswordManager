@@ -96,6 +96,20 @@ public sealed partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(CopySelectedLoginCommand))]
     private VaultEntry? _selectedEntry;
 
+    /// <summary>
+    /// 선택된 행이 즐겨찾기 그룹 쪽인가(TD-040). 핀한 계정은 즐겨찾기 그룹과 사이트 그룹에 **같은
+    /// 인스턴스**로 두 번 나오므로, 항목만 비교하면 두 행이 동시에 강조된다. 이 플래그로 한쪽만 켠다.
+    /// </summary>
+    [ObservableProperty]
+    private bool _selectionInFavorites;
+
+    /// <summary>행을 선택한다. 뷰가 클릭한 행이 어느 그룹에 속했는지 함께 알려준다.</summary>
+    public void Select(VaultEntry? entry, bool inFavorites)
+    {
+        SelectedEntry = entry;
+        SelectionInFavorites = entry is not null && inFavorites;
+    }
+
     /// <summary>사용자에게 보여줄 일시 안내(예: OTP 미등록 시 열람 안내). design 5.4.</summary>
     [ObservableProperty]
     private string? _statusMessage;
@@ -183,7 +197,9 @@ public sealed partial class MainViewModel : ObservableObject
 
         // 필터·삭제로 화면에서 사라진 항목이 선택된 채 남으면 단축키가 안 보이는 행을 건드리게 된다.
         if (SelectedEntry is not null && !filtered.Contains(SelectedEntry))
-            SelectedEntry = null;
+            Select(null, inFavorites: false);
+        else if (SelectionInFavorites && SelectedEntry?.IsPinned != true)
+            SelectionInFavorites = false; // 핀이 풀리면 즐겨찾기 그룹 자체가 없어진다
 
         // OTP 등록 상태가 바뀌었을 수 있으니(예: 등록 후 복귀) 행 버튼 전환용 플래그를 갱신 통지한다.
         OnPropertyChanged(nameof(HasOtp));
@@ -270,13 +286,14 @@ public sealed partial class MainViewModel : ObservableObject
         if (current < 0)
         {
             // 선택이 없을 땐 진행 방향의 가장 가까운 끝에서 시작한다(↓=첫 항목, ↑=마지막 항목).
-            SelectedEntry = step > 0 ? Entries[0] : Entries[^1];
+            // 키보드 이동은 중복 없는 평면 목록 기준이라 강조도 원래 자리(사이트 그룹)에 준다.
+            Select(step > 0 ? Entries[0] : Entries[^1], inFavorites: false);
             return;
         }
 
         var next = current + step;
         if (next < 0 || next >= Entries.Count) return; // 양끝에서 정지
-        SelectedEntry = Entries[next];
+        Select(Entries[next], inFavorites: false);
     }
 
     /// <summary>다음 항목 선택(↓). 선택이 없으면 첫 항목.</summary>

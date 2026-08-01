@@ -34,10 +34,19 @@ public partial class MainView : UserControl
         SearchBox.SelectAll();
     }
 
-    /// <summary>행 아무 곳이나 누르면 그 계정을 선택한다(키보드 ↑↓ 선택과 같은 상태를 공유).</summary>
+    /// <summary>
+    /// 행 아무 곳이나 누르면 그 계정을 선택한다(키보드 ↑↓ 선택과 같은 상태를 공유).
+    /// 핀한 계정은 즐겨찾기·사이트 그룹 양쪽에 나오므로, 누른 행이 어느 그룹인지도 함께 알려준다(TD-040).
+    /// </summary>
     private void AccountRow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (DataContext is MainViewModel vm && sender is FrameworkElement { DataContext: VaultEntry entry })
-            vm.SelectedEntry = entry;
+        if (DataContext is not MainViewModel vm || sender is not FrameworkElement { DataContext: VaultEntry entry } row)
+            return;
+
+        // 이 행을 담은 계정 ItemsControl의 DataContext가 그 행이 속한 그룹이다.
+        var group = ItemsControl.ItemsControlFromItemContainer(
+            ItemsControl.ContainerFromElement(null, row))?.DataContext as SiteGroup;
+
+        vm.Select(entry, inFavorites: group?.IsFavorites ?? false);
     }
 }

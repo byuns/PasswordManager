@@ -742,6 +742,65 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void Selection_tracks_which_group_the_row_belongs_to()
+    {
+        // 핀한 계정은 즐겨찾기 그룹과 사이트 그룹 양쪽에 같은 인스턴스로 나온다.
+        // 선택 강조가 한 행에만 켜지려면 "어느 그룹의 행인지"까지 구분해야 한다.
+        var vm = new MainViewModel(UnlockedWith(("Steam", "main")));
+        vm.TogglePinCommand.Execute(vm.Entries[0]);
+        var entry = vm.Entries[0];
+
+        vm.Select(entry, inFavorites: true);
+        Assert.Same(entry, vm.SelectedEntry);
+        Assert.True(vm.SelectionInFavorites);
+
+        vm.Select(entry, inFavorites: false);
+        Assert.Same(entry, vm.SelectedEntry);
+        Assert.False(vm.SelectionInFavorites);
+    }
+
+    [Fact]
+    public void Keyboard_movement_selects_the_row_in_the_site_group()
+    {
+        // ↑↓는 평면 목록(Entries) 기준이라 중복이 없다. 강조는 원래 자리(사이트 그룹)에 준다.
+        var vm = new MainViewModel(UnlockedWith(("Alpha", "a"), ("Bravo", "b")));
+        var alpha = vm.Entries.First(e => e.Title == "Alpha");
+        vm.TogglePinCommand.Execute(alpha);
+        vm.Select(vm.Entries.First(e => e.Title == "Alpha"), inFavorites: true);
+
+        vm.SelectNextCommand.Execute(null); // 실제로 다음 항목으로 이동
+
+        Assert.Equal("Bravo", vm.SelectedEntry?.Title);
+        Assert.False(vm.SelectionInFavorites);
+    }
+
+    [Fact]
+    public void Staying_at_the_end_keeps_the_current_row_highlighted()
+    {
+        // 이동이 일어나지 않았다면 강조도 그대로여야 한다(즐겨찾기 행에서 ↓를 눌러 끝인 경우).
+        var vm = new MainViewModel(UnlockedWith(("Steam", "main")));
+        vm.TogglePinCommand.Execute(vm.Entries[0]);
+        vm.Select(vm.Entries[0], inFavorites: true);
+
+        vm.SelectNextCommand.Execute(null);
+
+        Assert.True(vm.SelectionInFavorites);
+    }
+
+    [Fact]
+    public void Clearing_the_selection_also_clears_the_group_flag()
+    {
+        var vm = new MainViewModel(UnlockedWith(("Steam", "main"), ("GitHub", "dev")));
+        vm.TogglePinCommand.Execute(vm.Entries.First(e => e.Title == "Steam"));
+        vm.Select(vm.Entries.First(e => e.Title == "Steam"), inFavorites: true);
+
+        vm.SearchQuery = "github"; // 선택 항목이 필터 밖으로 나간다
+
+        Assert.Null(vm.SelectedEntry);
+        Assert.False(vm.SelectionInFavorites);
+    }
+
+    [Fact]
     public void Favorites_group_is_absent_when_nothing_is_pinned()
     {
         var vm = new MainViewModel(UnlockedWith(("Steam", "main")));

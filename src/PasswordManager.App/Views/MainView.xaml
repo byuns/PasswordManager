@@ -204,9 +204,15 @@
                                                 <Border CornerRadius="6"
                                                         Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
                                                     <Border.Visibility>
+                                                        <!-- 핀한 계정은 즐겨찾기·사이트 그룹에 같은 인스턴스로 두 번 나온다.
+                                                             어느 그룹의 행인지까지 맞아야 강조를 켠다(TD-040). -->
                                                         <MultiBinding Converter="{StaticResource EntrySelected}" Mode="OneWay">
                                                             <Binding />
                                                             <Binding Path="DataContext.SelectedEntry"
+                                                                     RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                            <Binding Path="DataContext.IsFavorites"
+                                                                     RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
+                                                            <Binding Path="DataContext.SelectionInFavorites"
                                                                      RelativeSource="{RelativeSource AncestorType=UserControl}" />
                                                         </MultiBinding>
                                                     </Border.Visibility>

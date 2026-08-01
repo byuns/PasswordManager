@@ -134,7 +134,12 @@
   카드 안에 촘촘히 쌓여 있어, 세로 바가 붙으면 산만해진다. 배경만으로 충분히 읽힌다.
 
 - 행 아무 곳이나 클릭해도 선택된다(키보드 선택과 같은 상태를 공유).
-- 배선: `MainViewModel.SelectedEntry` + 행의 항목 → `EntrySelectedConverter`(MultiBinding) → `Visibility`.
+- 배선: `MainViewModel.SelectedEntry`·`SelectionInFavorites` + 행의 항목·그룹 →
+  `EntrySelectedConverter`(MultiBinding 4값) → `Visibility`.
+  - 핀한 계정은 즐겨찾기·사이트 그룹에 **같은 인스턴스**로 두 번 나오므로, 항목만 비교하면 두 행이
+    동시에 켜진다. **어느 그룹의 행인지까지 일치해야** 강조한다(TD-045).
+  - 키보드 이동(↑↓)은 중복 없는 평면 목록 기준이라 **사이트 그룹 쪽**을 고른다. 끝에서 멈춰
+    이동이 없었다면 현재 강조를 유지한다.
 - **선택은 화면에 보이는 목록에만 머문다** — 검색·태그 필터나 삭제로 항목이 사라지면
   `Refresh()`가 선택을 함께 해제한다.
 

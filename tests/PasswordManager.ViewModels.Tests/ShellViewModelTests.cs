@@ -655,8 +655,18 @@ public class ShellViewModelTests
     {
         public HashSet<string> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
         public List<string> Deleted { get; } = new();
+
+        /// <summary>이 경로들은 삭제 시 예외를 던진다(파일 잠김·권한 없음 흉내).</summary>
+        public HashSet<string> FailOn { get; } = new(StringComparer.OrdinalIgnoreCase);
+
         public bool Exists(string path) => Files.Contains(path);
-        public void Delete(string path) { Files.Remove(path); Deleted.Add(path); }
+
+        public void Delete(string path)
+        {
+            if (FailOn.Contains(path)) throw new IOException($"사용 중인 파일: {path}");
+            Files.Remove(path);
+            Deleted.Add(path);
+        }
     }
 
     private sealed class FakeDialog : PasswordManager.ViewModels.Services.IDialogService
@@ -720,6 +730,38 @@ public class ShellViewModelTests
         Assert.Equal(1, dialog.ConfirmCount);
         Assert.Empty(eraser.Deleted);                   // 아무것도 지우지 않았다
         Assert.Equal(5, eraser.Files.Count);
+        Assert.Equal(ShellState.Unlocking, shell.State);
+    }
+
+    [Fact]
+    public async Task Reset_survives_a_locked_file_and_still_erases_the_rest()
+    {
+        // 백신·탐색기가 사이드카를 잡고 있어도 앱이 죽으면 안 된다(async void 예외 방지).
+        var (shell, eraser, _) = ShellAtUnlock();
+        eraser.FailOn.Add(@"C:\data\vault.dat.bak");
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+
+        unlock.Password = UnlockViewModel.ResetCommand;
+        var ex = await Record.ExceptionAsync(() => unlock.UnlockCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);                                   // 예외가 밖으로 새지 않는다
+        Assert.Equal(4, eraser.Deleted.Count);             // 나머지는 지워졌다
+        Assert.Equal(ShellState.Creating, shell.State);    // 볼트 본체는 지워졌으므로 생성 화면으로
+    }
+
+    [Fact]
+    public async Task Reset_that_cannot_delete_the_vault_itself_stays_on_unlock()
+    {
+        // 볼트 본체가 안 지워졌다면 초기화된 게 아니다 — 생성 화면으로 넘어가면 거짓말이 된다.
+        var (shell, eraser, _) = ShellAtUnlock();
+        eraser.FailOn.Add(@"C:\data\vault.dat");
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+
+        unlock.Password = UnlockViewModel.ResetCommand;
+        var ex = await Record.ExceptionAsync(() => unlock.UnlockCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+        Assert.Contains(@"C:\data\vault.dat", eraser.Files); // 볼트는 남아 있다
         Assert.Equal(ShellState.Unlocking, shell.State);
     }
 

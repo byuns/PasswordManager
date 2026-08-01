@@ -49,9 +49,12 @@ public partial class App : Application
 
         var manager = new VaultManager(new FileVaultStore(), vaultPath);
 
-        // 개발용 시드: PWM_SEED=1이고 볼트가 없을 때만 태그 많은 더미 데이터로 채운다(평상시 미실행).
+#if DEBUG
+        // 개발용 시드: PWM_SEED=1이고 볼트가 없을 때만 태그 많은 더미 데이터로 채운다.
+        // Debug 빌드에만 컴파일된다 — 게시본에는 이 경로 자체가 없다(TD-045).
         if (Environment.GetEnvironmentVariable("PWM_SEED") == "1" && !manager.Exists())
             DevSeed.Populate(manager);
+#endif
         var clipboard = new ClipboardCopier(new WpfClipboardService(), new DispatcherScheduler());
         var throttle = new LoginThrottle(FileLockoutStore.ForVault(vaultPath));
 

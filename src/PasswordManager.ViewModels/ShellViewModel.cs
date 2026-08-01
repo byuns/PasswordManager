@@ -130,11 +130,34 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
 
         _vault.Lock(); // 혹시 열린 세션이 있으면 메모리의 키·데이터부터 버린다
-        foreach (var path in VaultReset.PathsFor(_vaultPath))
-            if (FileEraser.Exists(path))
-                FileEraser.Delete(path);
 
-        Dialog.Notify("초기화됨", "모든 데이터를 지웠습니다. 새 볼트를 만들어 주세요.");
+        // 파일이 잠겨 있거나(백신·탐색기) 권한이 없으면 삭제가 실패할 수 있다. async void라
+        // 예외가 새면 앱이 그대로 죽으므로, 파일마다 잡아서 실패한 것만 모은다.
+        var failed = new List<string>();
+        foreach (var path in VaultReset.PathsFor(_vaultPath))
+        {
+            try
+            {
+                if (FileEraser.Exists(path)) FileEraser.Delete(path);
+            }
+            catch (Exception)
+            {
+                failed.Add(Path.GetFileName(path));
+            }
+        }
+
+        // 볼트 본체가 남았다면 초기화된 게 아니다 — 생성 화면으로 넘기면 사용자를 속이는 셈이다.
+        if (FileEraser.Exists(_vaultPath))
+        {
+            Dialog.Notify("초기화 실패",
+                $"볼트 파일을 지우지 못했습니다({string.Join(", ", failed)}). " +
+                "다른 프로그램이 파일을 쓰고 있는지 확인한 뒤 다시 시도하세요.");
+            return;
+        }
+
+        Dialog.Notify("초기화됨", failed.Count == 0
+            ? "모든 데이터를 지웠습니다. 새 볼트를 만들어 주세요."
+            : $"볼트를 지웠습니다. 다만 일부 파일({string.Join(", ", failed)})은 지우지 못했습니다.");
         StartCreate();
     }
 

@@ -1,3 +1,4 @@
+#if DEBUG
 using System.Linq;
 using PasswordManager.Core.Models;
 using PasswordManager.Core.Security;
@@ -8,6 +9,10 @@ namespace PasswordManager.App;
 /// <summary>
 /// 개발/테스트 전용 더미 시드. 앱을 <c>PWM_VAULT_PATH</c>(임시 경로) + <c>PWM_SEED=1</c>로 띄울 때만
 /// 실행돼, 태그가 많은 볼트를 만들어 UI(예: 태그 칩 바 가로 슬라이딩)를 확인한다. 실제 볼트엔 영향 없음.
+/// <para>
+/// <b>Debug 빌드에만 포함된다</b>(TD-045). 게시(Release)본에는 아예 컴파일되지 않아, 배포된 exe에
+/// 개발용 경로와 하드코딩된 시드 비밀번호가 남지 않는다.
+/// </para>
 /// </summary>
 internal static class DevSeed
 {
@@ -51,3 +56,4 @@ internal static class DevSeed
             });
     }
 }
+#endif
