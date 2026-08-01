@@ -7,12 +7,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-    <Grid MaxWidth="400" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
-        <!-- 게이트 카드: 아이콘 헤더 + 코드 입력/비번 표시를 한 카드에 정돈 -->
+    <Grid MaxWidth="480" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+        <!-- 게이트 카드: 아이콘 헤더 + 코드 입력/비번 표시를 한 카드에 정돈.
+             비번+이력이 함께 뜨면 폭이 빠듯해 400 → 480으로 넓혔다. -->
         <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="1" CornerRadius="{StaticResource CardCornerRadius}"
-                Padding="28,24">
+                Padding="32,28">
             <StackPanel>
                 <!-- 아이콘 헤더 -->
                 <Border Width="56" Height="56" CornerRadius="28"
@@ -53,7 +54,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBox Grid.Column="0" Text="{Binding RevealedPassword, Mode=OneWay}"
-                                    IsReadOnly="True" FontFamily="Consolas" FontSize="16" />
+                                    IsReadOnly="True" FontFamily="Consolas" FontSize="18" />
                         <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0"
                                    ToolTip="복사 (20초 후 자동 삭제)"
                                    Command="{Binding CopyCommand}" CommandParameter="{Binding RevealedPassword}" />
