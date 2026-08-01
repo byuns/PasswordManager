@@ -648,4 +648,93 @@ public class ShellViewModelTests
         Assert.Contains(PasswordManager.Core.Notifications.SlackEvent.PasswordChange, notifier.Events);
         Assert.Contains("Steam", notifier.SiteNames);
     }
+
+    // --- 전체 초기화 (TD-044) ---
+
+    private sealed class FakeEraser : PasswordManager.ViewModels.Services.IFileEraser
+    {
+        public HashSet<string> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<string> Deleted { get; } = new();
+        public bool Exists(string path) => Files.Contains(path);
+        public void Delete(string path) { Files.Remove(path); Deleted.Add(path); }
+    }
+
+    private sealed class FakeDialog : PasswordManager.ViewModels.Services.IDialogService
+    {
+        public bool ConfirmResult { get; set; } = true;
+        public int ConfirmCount { get; private set; }
+        public Task<bool> ConfirmAsync(string title, string message, string confirmText, string cancelText)
+        {
+            ConfirmCount++;
+            return Task.FromResult(ConfirmResult);
+        }
+        public void Notify(string title, string message) { }
+    }
+
+    /// <summary>언락 화면이 뜬 셸과, 볼트 사이드카가 전부 존재하는 가짜 파일 시스템을 만든다.</summary>
+    private static (ShellViewModel shell, FakeEraser eraser, FakeDialog dialog) ShellAtUnlock()
+    {
+        const string vaultPath = @"C:\data\vault.dat";
+        var store = new InMemoryStore();
+        new VaultManager(store, Path).CreateNew(Master, Light);
+
+        var eraser = new FakeEraser();
+        foreach (var p in VaultReset.PathsFor(vaultPath)) eraser.Files.Add(p);
+
+        var dialog = new FakeDialog();
+        var shell = new ShellViewModel(new VaultManager(store, Path), Light, vaultPath: vaultPath)
+        {
+            FileEraser = eraser,
+            Dialog = dialog,
+        };
+        return (shell, eraser, dialog);
+    }
+
+    [Fact]
+    public async Task Reset_command_confirmed_erases_every_file_and_returns_to_create_flow()
+    {
+        var (shell, eraser, dialog) = ShellAtUnlock();
+        dialog.ConfirmResult = true;
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+
+        unlock.Password = UnlockViewModel.ResetCommand;
+        await unlock.UnlockCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, dialog.ConfirmCount);
+        Assert.Empty(eraser.Files);                       // 볼트·백업·잠금상태·로그 전부 삭제
+        Assert.Equal(5, eraser.Deleted.Count);
+        Assert.Equal(ShellState.Creating, shell.State);    // 새 볼트 만들기로 이동
+        Assert.IsType<CreateVaultViewModel>(shell.CurrentViewModel);
+    }
+
+    [Fact]
+    public async Task Reset_command_cancelled_keeps_every_file_and_stays_on_unlock()
+    {
+        var (shell, eraser, dialog) = ShellAtUnlock();
+        dialog.ConfirmResult = false;
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+
+        unlock.Password = UnlockViewModel.ResetCommand;
+        await unlock.UnlockCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, dialog.ConfirmCount);
+        Assert.Empty(eraser.Deleted);                   // 아무것도 지우지 않았다
+        Assert.Equal(5, eraser.Files.Count);
+        Assert.Equal(ShellState.Unlocking, shell.State);
+    }
+
+    [Fact]
+    public async Task Reset_skips_files_that_are_not_there()
+    {
+        var (shell, eraser, _) = ShellAtUnlock();
+        eraser.Files.Remove(@"C:\data\vault.dat.bak");   // 백업이 아직 없는 새 볼트 상황
+        eraser.Files.Remove(@"C:\data\slack-failures.log");
+        var unlock = Assert.IsType<UnlockViewModel>(shell.CurrentViewModel);
+
+        unlock.Password = UnlockViewModel.ResetCommand;
+        await unlock.UnlockCommand.ExecuteAsync(null);
+
+        Assert.Equal(3, eraser.Deleted.Count);
+        Assert.Empty(eraser.Files);
+    }
 }

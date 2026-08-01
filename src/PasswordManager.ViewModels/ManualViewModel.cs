@@ -46,6 +46,8 @@ public sealed partial class ManualViewModel : ObservableObject
                 "왼쪽 위 잠금 버튼으로 즉시 잠그고, 일정 시간 쓰지 않으면 자동으로 잠깁니다."),
             new ManualItem("ShieldKeyhole24", "복구 키",
                 "마스터 비밀번호를 잊으면 복구 키로만 되살릴 수 있습니다. 앱 밖 안전한 곳에 따로 보관하세요."),
+            new ManualItem("ArrowReset24", "전체 초기화",
+                "마스터 비밀번호와 복구 키를 모두 잃었다면, 잠금 화면의 비밀번호 칸에 /reset 을 입력해 처음부터 다시 시작할 수 있습니다. 저장된 모든 계정이 영구적으로 사라집니다."),
             new ManualItem("Delete24", "휴지통",
                 "삭제한 계정은 30일간 휴지통에 보관됩니다. 설정 > 백업·데이터 > 휴지통에서 되살리거나 완전히 지울 수 있습니다."),
             new ManualItem("Settings24", "설정",

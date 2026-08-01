@@ -78,6 +78,9 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>확인창·완료 토스트를 담당하는 다이얼로그 서비스. 창이 뜬 뒤 App/View가 주입한다(그 전엔 null).</summary>
     public IDialogService? Dialog { get; set; }
 
+    /// <summary>전체 초기화 시 파일을 지우는 구현(TD-044). 없으면 초기화는 아무 일도 하지 않는다.</summary>
+    public IFileEraser? FileEraser { get; set; }
+
     partial void OnSectionChanged(ShellSection? value) =>
         OnPropertyChanged(nameof(IsSidebarVisible));
 
@@ -106,9 +109,33 @@ public sealed partial class ShellViewModel : ObservableObject
         vm.Unlocked += OnVaultOpened;
         vm.LoginFailed += OnLoginFailed;
         vm.RecoveryRequested += OnRecoveryRequested;
+        vm.ResetRequested += OnResetRequested;
         CurrentViewModel = vm;
         Section = null;
         State = ShellState.Unlocking;
+    }
+
+    /// <summary>
+    /// 언락 화면에서 `/reset` 커맨드가 들어왔을 때(TD-044). 경고창을 띄우고, 확인하면 볼트와 사이드카를
+    /// 모두 지운 뒤 새 볼트 생성 화면으로 넘어간다. 되돌릴 수 없으므로 확인 없이는 아무것도 하지 않는다.
+    /// </summary>
+    private async void OnResetRequested(object? sender, EventArgs e)
+    {
+        if (Dialog is null || FileEraser is null || _vaultPath is null) return;
+
+        if (!await Dialog.ConfirmAsync(
+                "전체 데이터 초기화",
+                "저장된 모든 계정·비밀번호와 자동 백업이 영구적으로 사라집니다.\n되돌릴 수 없습니다.",
+                "영구 삭제", "취소"))
+            return;
+
+        _vault.Lock(); // 혹시 열린 세션이 있으면 메모리의 키·데이터부터 버린다
+        foreach (var path in VaultReset.PathsFor(_vaultPath))
+            if (FileEraser.Exists(path))
+                FileEraser.Delete(path);
+
+        Dialog.Notify("초기화됨", "모든 데이터를 지웠습니다. 새 볼트를 만들어 주세요.");
+        StartCreate();
     }
 
     /// <summary>마스터 비번 로그인 실패 → 세션 캐시(A안)의 마지막 설정으로 슬랙 알림(design 7.8).</summary>

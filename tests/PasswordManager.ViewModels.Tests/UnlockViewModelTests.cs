@@ -249,4 +249,83 @@ public class UnlockViewModelTests
         Assert.Null(vm.ErrorMessage);
         Assert.True(manager.IsUnlocked);
     }
+
+    // --- 전체 초기화 커맨드 (TD-044) ---
+
+    [Fact]
+    public async Task Typing_the_reset_command_asks_for_reset_instead_of_unlocking()
+    {
+        var manager = ManagerWithExistingVault();
+        var vm = new UnlockViewModel(manager);
+        var requested = false;
+        vm.ResetRequested += (_, _) => requested = true;
+        vm.Password = UnlockViewModel.ResetCommand;
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.True(requested);
+        Assert.False(manager.IsUnlocked);      // 볼트를 열려고 시도하지 않는다
+        Assert.Null(vm.ErrorMessage);          // 비번 오류로 취급하지 않는다
+        Assert.Equal(string.Empty, vm.Password); // 입력란은 비운다
+    }
+
+    [Fact]
+    public async Task Reset_command_is_matched_ignoring_case_and_padding()
+    {
+        var vm = new UnlockViewModel(ManagerWithExistingVault());
+        var requested = false;
+        vm.ResetRequested += (_, _) => requested = true;
+        vm.Password = "  /RESET  ";
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.True(requested);
+    }
+
+    [Fact]
+    public async Task Reset_command_does_not_count_as_a_failed_login_attempt()
+    {
+        var throttle = new LoginThrottle(new MemoryLockoutStore());
+        var vm = new UnlockViewModel(ManagerWithExistingVault(), throttle);
+        vm.Password = UnlockViewModel.ResetCommand;
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.Null(throttle.RemainingLockout()); // 시도 횟수가 올라가지 않았다
+    }
+
+    [Fact]
+    public async Task Reset_command_works_even_while_locked_out()
+    {
+        // 초기화가 정작 필요한 상황은 비번을 여러 번 틀린 뒤일 수 있다 —
+        // 재시도 잠금에 막혀 초기화조차 못 하면 곤란하다.
+        var throttle = new LoginThrottle(new MemoryLockoutStore());
+        var vm = new UnlockViewModel(ManagerWithExistingVault(), throttle);
+        for (var i = 0; i < 10; i++)
+        {
+            vm.Password = "wrong-password";
+            await vm.UnlockCommand.ExecuteAsync(null);
+        }
+        Assert.NotNull(throttle.RemainingLockout()); // 잠긴 상태 확인
+
+        var requested = false;
+        vm.ResetRequested += (_, _) => requested = true;
+        vm.Password = UnlockViewModel.ResetCommand;
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.True(requested);
+    }
+
+    [Fact]
+    public async Task A_normal_password_never_triggers_reset()
+    {
+        var vm = new UnlockViewModel(ManagerWithExistingVault());
+        var requested = false;
+        vm.ResetRequested += (_, _) => requested = true;
+        vm.Password = Master;
+
+        await vm.UnlockCommand.ExecuteAsync(null);
+
+        Assert.False(requested);
+    }
 }

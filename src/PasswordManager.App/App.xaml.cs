@@ -64,7 +64,10 @@ public partial class App : Application
 
         var shell = new ShellViewModel(manager, clipboard: clipboard,
             appVersion: GetAppVersion(), vaultPath: vaultPath, throttle: throttle,
-            slack: slack, slackCache: slackCache);
+            slack: slack, slackCache: slackCache)
+        {
+            FileEraser = new Services.FileEraser(), // 전체 초기화(TD-044)에서만 쓰인다
+        };
 
         new ShellWindow { DataContext = shell }.Show();
     }

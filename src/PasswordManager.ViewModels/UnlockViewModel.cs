@@ -47,6 +47,15 @@ public sealed partial class UnlockViewModel : ObservableObject
     /// <summary>"백업에서 복원" 요청. 뷰가 백업 파일 선택 대화상자를 연다(S9·TD-028).</summary>
     public event EventHandler? RestoreRequested;
 
+    /// <summary>전체 초기화 요청(<see cref="ResetCommand"/> 입력). 셸이 경고창을 띄운다(TD-044).</summary>
+    public event EventHandler? ResetRequested;
+
+    /// <summary>
+    /// 비밀번호 칸에 입력하면 전체 초기화로 빠지는 커맨드(TD-044). 화면에 버튼을 두지 않아
+    /// 실수로 누를 수 없고, 마스터 비밀번호 최소 길이(12자)보다 짧아 실제 비번과 충돌하지 않는다.
+    /// </summary>
+    public const string ResetCommand = "/reset";
+
     [RelayCommand]
     private void ForgotPassword() => RecoveryRequested?.Invoke(this, EventArgs.Empty);
 
@@ -70,6 +79,15 @@ public sealed partial class UnlockViewModel : ObservableObject
     {
         ErrorMessage = null;
         IsCorrupted = false;
+
+        // 초기화 커맨드는 비밀번호가 아니다 → 재시도 제한보다 먼저 확인한다.
+        // 비번을 여러 번 틀려 잠긴 상태야말로 초기화가 필요한 순간이라, 여기서 막히면 안 된다(TD-044).
+        if (string.Equals(Password.Trim(), ResetCommand, StringComparison.OrdinalIgnoreCase))
+        {
+            Password = string.Empty; // 커맨드가 입력란에 남지 않게
+            ResetRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
 
         // 재시도 제한이 걸려 있으면 비번을 확인하지 않고 남은 시간을 안내한다(TD-024).
         if (_throttle?.RemainingLockout() is { } remaining)
