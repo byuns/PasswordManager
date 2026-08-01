@@ -1,6 +1,7 @@
 using PasswordManager.Core.Security;
 using PasswordManager.Core.Vault;
 using PasswordManager.ViewModels;
+using PasswordManager.ViewModels.Services;
 
 namespace PasswordManager.ViewModels.Tests;
 
@@ -15,6 +16,22 @@ public class CreateVaultViewModelTests
         public bool Exists(string path) => _files.ContainsKey(path);
         public void Save(string path, EncryptedVault vault) => _files[path] = vault;
         public EncryptedVault Load(string path) => _files[path];
+    }
+
+    private sealed class FakeClipboard : IClipboardService
+    {
+        public string? Text { get; private set; }
+        public void SetText(string text) => Text = text;
+        public void Clear() => Text = null;
+    }
+
+    /// <summary>예약된 자동 삭제를 테스트가 직접 터뜨릴 수 있게 붙잡아 두는 스케줄러.</summary>
+    private sealed class ManualScheduler : IScheduler
+    {
+        private Action? _pending;
+        public bool HasPending => _pending is not null;
+        public void Schedule(TimeSpan delay, Action action) => _pending = action;
+        public void RunPending() { var a = _pending; _pending = null; a?.Invoke(); }
     }
 
     private static (CreateVaultViewModel vm, VaultManager manager) NewVm()
@@ -112,5 +129,37 @@ public class CreateVaultViewModelTests
         vm.AcknowledgeCommand.Execute(null);
 
         Assert.True(completed);
+    }
+
+    // --- 복구 키 복사 (TD-043) ---
+
+    [Fact]
+    public async Task CopyRecoveryKey_puts_it_on_the_clipboard_and_schedules_auto_clear()
+    {
+        var clip = new FakeClipboard();
+        var scheduler = new ManualScheduler();
+        var manager = new VaultManager(new InMemoryStore(), Path);
+        var vm = new CreateVaultViewModel(manager, Light, new ClipboardCopier(clip, scheduler));
+        vm.Password = "correct horse battery staple";
+        vm.ConfirmPassword = "correct horse battery staple";
+        await vm.CreateCommand.ExecuteAsync(null);
+
+        vm.CopyRecoveryKeyCommand.Execute(null);
+
+        Assert.Equal(vm.RecoveryKeyDisplay, clip.Text);
+        Assert.True(scheduler.HasPending); // 복구 키는 비밀 → 자동 삭제가 걸려야 한다
+
+        scheduler.RunPending();
+        Assert.Null(clip.Text);
+    }
+
+    [Fact]
+    public void CopyRecoveryKey_disabled_until_a_key_exists()
+    {
+        var manager = new VaultManager(new InMemoryStore(), Path);
+        var vm = new CreateVaultViewModel(manager, Light,
+            new ClipboardCopier(new FakeClipboard(), new ManualScheduler()));
+
+        Assert.False(vm.CopyRecoveryKeyCommand.CanExecute(null));
     }
 }

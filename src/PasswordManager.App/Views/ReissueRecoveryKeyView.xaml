@@ -57,8 +57,18 @@
                 <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Padding="16">
-                    <ui:TextBlock FontFamily="Consolas" FontSize="16" TextWrapping="Wrap"
-                                  Text="{Binding RecoveryKeyDisplay}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" FontFamily="Consolas" FontSize="16" TextWrapping="Wrap"
+                                      VerticalAlignment="Center" Text="{Binding RecoveryKeyDisplay}" />
+                        <!-- 복구 키는 비밀이라 복사 시 클립보드 자동 삭제가 걸린다(TD-043) -->
+                        <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Copy24}" Margin="12,0,0,0"
+                                   VerticalAlignment="Center" ToolTip="복사 (잠시 후 클립보드에서 자동 삭제)"
+                                   Command="{Binding CopyRecoveryKeyCommand}" />
+                    </Grid>
                 </Border>
                 <CheckBox Content="새 복구 키를 안전한 곳에 보관했습니다." Margin="0,16,0,0"
                           IsChecked="{Binding RecoveryKeySaved}" />

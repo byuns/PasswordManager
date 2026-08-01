@@ -14,11 +14,13 @@ namespace PasswordManager.ViewModels;
 public sealed partial class ReissueRecoveryKeyViewModel : ObservableObject
 {
     private readonly VaultManager _vault;
+    private readonly ClipboardCopier? _copier;
 
     // kdf는 복구 래핑만 교체하는 재발급에선 쓰이지 않지만, 다른 화면들과 생성 시그니처를 맞춰 받는다.
-    public ReissueRecoveryKeyViewModel(VaultManager vault, KdfParams? kdf = null)
+    public ReissueRecoveryKeyViewModel(VaultManager vault, KdfParams? kdf = null, ClipboardCopier? copier = null)
     {
         _vault = vault;
+        _copier = copier;
     }
 
     [ObservableProperty]
@@ -36,6 +38,7 @@ public sealed partial class ReissueRecoveryKeyViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReissueCommand))]
     [NotifyCanExecuteChangedFor(nameof(AcknowledgeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyRecoveryKeyCommand))]
     private string? _recoveryKeyDisplay;
 
     /// <summary>사용자가 새 복구 키를 안전하게 보관했음을 확인(체크)했는가 (design 7.6).</summary>
@@ -78,4 +81,10 @@ public sealed partial class ReissueRecoveryKeyViewModel : ObservableObject
 
     [RelayCommand]
     private void Cancel() => Cancelled?.Invoke(this, EventArgs.Empty);
+
+    private bool CanCopyRecoveryKey() => RecoveryKeyDisplay is not null;
+
+    /// <summary>새 복구 키를 클립보드로 복사한다(TD-043). 비밀이므로 자동 삭제를 건다(design 5.5).</summary>
+    [RelayCommand(CanExecute = nameof(CanCopyRecoveryKey))]
+    private void CopyRecoveryKey() => _copier?.CopyWithAutoClear(RecoveryKeyDisplay);
 }

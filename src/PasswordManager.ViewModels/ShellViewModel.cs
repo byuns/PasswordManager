@@ -151,7 +151,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void StartCreate()
     {
-        var vm = new CreateVaultViewModel(_vault, _kdf);
+        var vm = new CreateVaultViewModel(_vault, _kdf, _clipboard);
         vm.Completed += OnVaultOpened;
         CurrentViewModel = vm;
         Section = null;
@@ -395,7 +395,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OnReissueRecoveryRequested(object? sender, EventArgs e)
     {
-        var vm = new ReissueRecoveryKeyViewModel(_vault, _kdf);
+        var vm = new ReissueRecoveryKeyViewModel(_vault, _kdf, _clipboard);
         vm.Completed += OnReissueRecoveryFinished;
         vm.Cancelled += OnReissueRecoveryFinished;
         CurrentViewModel = vm;
