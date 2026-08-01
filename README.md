@@ -16,6 +16,9 @@
 - **비밀번호 이력** — 변경할 때마다 이전 값과 변경 날짜를 자동 보관 (분실 방지)
 - **비밀번호 생성기** — 길이·문자 종류를 골라 안전한 비밀번호를 즉석에서 생성
 - **검색·태그 필터** — 제목·아이디·태그로 원하는 계정을 빠르게 찾기
+- **즐겨찾기·정렬** — 자주 쓰는 계정을 맨 위에 고정, 이름·최근 변경·최근 사용순 정렬
+- **휴지통** — 삭제한 계정을 30일간 보관해 실수로 지워도 되살리기
+- **키보드 단축키** — `Ctrl+F` 검색 · `Ctrl+N` 추가 · `Ctrl+L` 잠금 · `↑↓` 이동 등
 - **복구 키** — 마스터 비밀번호를 잊어도 최초 발급한 복구 키로 되살리기
 - **위생 관리** — 클립보드 자동 삭제, 자동 잠금, 화면 마스킹
 
@@ -59,18 +62,53 @@ PasswordManager/
 
 ---
 
-## 🚀 실행하기
+## 🚀 설치하고 쓰기
 
-```bash
-# 빌드
-dotnet build
+### 1. 실행 파일 만들기
 
-# 앱 실행
-dotnet run --project src/PasswordManager.App
+.NET 런타임까지 담은 **단일 exe**로 게시합니다. 받는 PC에 .NET을 따로 깔 필요가 없습니다.
 
-# 테스트
-dotnet test
+```powershell
+dotnet publish src/PasswordManager.App -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o publish
 ```
+
+`publish/PasswordManager.exe` (약 71MB) 하나가 나옵니다. 원하는 폴더로 옮겨 두고,
+바로가기를 만들어 시작 메뉴나 작업표시줄에 고정하면 됩니다.
+
+### 2. 첫 실행
+
+1. **마스터 비밀번호 설정** — 12자 이상. 이 하나로 볼트 전체가 잠깁니다.
+2. **복구 키 발급** — 화면에 뜬 복구 키를 종이 등 **앱 밖에** 보관하고 확인 체크.
+3. **OTP 등록** — 표시된 QR을 폰의 Google Authenticator 등으로 스캔.
+   등록해야 비밀번호 보기·편집·삭제가 열립니다.
+
+볼트 파일은 `%APPDATA%\PasswordManager\vault.dat`에 만들어집니다.
+저장할 때마다 이전 파일이 `vault.dat.bak`으로 보존됩니다.
+
+> ⚠️ **백업**: 볼트 파일을 잃으면 계정 정보도 사라집니다.
+> 설정 > 백업·데이터에서 주기적으로 백업해 두세요.
+
+---
+
+## 🧑‍💻 개발
+
+```powershell
+dotnet build                                  # 빌드
+dotnet test                                   # 전체 테스트
+dotnet run --project src/PasswordManager.App  # 실제 볼트로 실행
+```
+
+더미 데이터가 든 **임시 볼트**로 화면을 확인하려면:
+
+```powershell
+$env:PWM_VAULT_PATH = "$env:TEMP\pwm-seed\vault.dat"   # 실제 볼트와 분리
+$env:PWM_SEED = "1"                                     # 볼트가 없을 때만 시드
+dotnet run --project src/PasswordManager.App
+```
+
+시드 볼트의 마스터 비밀번호는 `DevSeed.cs`에 있습니다.
 
 ---
 

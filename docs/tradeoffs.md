@@ -2,6 +2,41 @@
 
 주요 기술 선택의 대안·트레이드오프·결정 근거를 기록한다. 최신 항목이 위로 온다.
 
+## TD-042. 배포 형태: 단독 실행 exe vs 런타임 의존 exe
+
+- **결정일**: 2026-08-01
+- **결정**: ✅ **self-contained 단일 exe**(win-x64, 압축). `publish/PasswordManager.exe` 약 71MB
+- **상태**: 확정 (v1.0.0 게시 완료)
+
+### 배경
+기능(M1~M6 + 편의 기능)은 끝났지만 **`dotnet run` 없이는 실행할 수 없는 상태**였다.
+매일 쓰는 앱이 되려면 실행 파일 하나로 떨어져 시작 메뉴에 올라가야 한다.
+
+### 선택지 비교
+
+| 선택지 | 크기 | 트레이드오프 |
+|---|---|---|
+| A. self-contained 단일 exe *(채택)* | ~71MB | .NET 설치 불필요, 다른 PC·USB에 복사만 하면 동작. 런타임 버전 문제 없음. 용량 큼 |
+| B. framework-dependent 단일 exe | ~5MB | 가볍지만 **.NET 8 Desktop Runtime**을 따로 설치해야 함 |
+
+### 결정 근거
+- **로컬 전용·무설치 기조(TD-001)와 결이 같다** — 볼트가 파일 하나이듯 앱도 파일 하나면 자기완결적이다.
+- 개인 PC용이라 **71MB는 실질적 부담이 아니다**. 반대로 런타임 설치 안내는 실제 마찰이 된다.
+- 나중에 다른 PC로 옮기거나 USB에 넣어 쓸 때 A가 그대로 동작한다.
+
+### 구성 메모
+- **RID·단일 파일 옵션은 csproj에 넣지 않고 publish 명령에서 준다.** csproj에 `RuntimeIdentifier`를
+  박으면 일반 개발 빌드 산출물 경로까지 RID별로 갈라져 불편하다. 명령 전문은 README에 있다.
+- `AssemblyName`을 `PasswordManager`로 바꿔 산출물이 `PasswordManager.exe`가 된다(이전엔 `PasswordManager.App.exe`).
+- `-p:DebugType=none`으로 pdb를 빼 **exe 한 개만** 남긴다.
+- **앱 아이콘**은 외부 이미지 도구 없이 `tools/make-icon.ps1`이 GDI+로 그려 `.ico`를 만든다
+  (인디고 라운드 사각 + 흰 자물쇠, 16~256px 6종). 아이콘을 잃어도 재생성할 수 있다.
+  - 이 스크립트는 **ASCII 주석만** 쓴다 — Windows PowerShell 5.1은 BOM 없는 UTF-8을 ANSI로 읽어
+    한글 주석이 깨지고, 그 여파로 뒤따르는 줄까지 파싱이 어긋난다(실제로 겪은 문제).
+- `publish/`는 `.gitignore` 대상 — 71MB 산출물을 저장소에 넣지 않고 명령으로 재생성한다.
+
+---
+
 ## TD-041. 삭제 방식: 즉시 영구 삭제 vs 휴지통(소프트 삭제)
 
 - **결정일**: 2026-08-01

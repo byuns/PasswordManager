@@ -11,3 +11,6 @@ obj/
 # Test results
 [Tt]est[Rr]esult*/
 *.trx
+
+# Publish output (71MB single-file exe — 필요할 때 README의 명령으로 다시 만든다)
+publish/
