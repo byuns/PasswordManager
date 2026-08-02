@@ -22,6 +22,7 @@ public partial class EntryEditView : UserControl
     private bool _suppress;            // 프로그램이 PasswordBox를 채우는 동안 변경 이벤트 무시
     private bool _showingPlaceholder;  // 지금 칸이 고정 마스킹(자리표시)만 보이는 상태인지
     private bool _userEdited;          // 사용자가 새 비밀번호를 실제로 입력했는지
+    private bool _siteSelectionReady;  // 초기 바인딩이 일으키는 사이트명 선택 이벤트는 무시
 
     public EntryEditView() => InitializeComponent();
 
@@ -39,6 +40,17 @@ public partial class EntryEditView : UserControl
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
         };
+        // 여기까지 온 뒤의 선택만 "사용자가 고른 것"으로 본다. 편집 폼을 열 때 기존 사이트명이
+        // 목록과 일치해 자동 선택되는 경우까지 자동 채움이 돌면 안 된다.
+        _siteSelectionReady = true;
+    }
+
+    /// <summary>사이트명 드롭다운에서 기존 사이트를 고르면 URL·태그를 함께 채운다(TD-046).</summary>
+    private void TitleInput_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_siteSelectionReady || e.AddedItems.Count == 0)
+            return;
+        (_vm ?? DataContext as EntryEditViewModel)?.ApplySiteCommand.Execute(e.AddedItems[0] as string);
     }
 
     private void ShowPlaceholder()
@@ -47,6 +59,15 @@ public partial class EntryEditView : UserControl
         PasswordInput.Password = Placeholder;
         _suppress = false;
         _showingPlaceholder = true;
+        // 자리표시를 "보기"로 열어봐야 점만 나오므로 버튼을 감춘다. 기존 비번 확인은
+        // 목록의 OTP 게이트 보기 화면이 담당한다(TD-047).
+        PasswordInput.RevealButtonEnabled = false;
+    }
+
+    private void HidePlaceholder()
+    {
+        _showingPlaceholder = false;
+        PasswordInput.RevealButtonEnabled = true;
     }
 
     private void PasswordInput_GotKeyboardFocus(object sender, RoutedEventArgs e)
@@ -55,9 +76,9 @@ public partial class EntryEditView : UserControl
         if (!_showingPlaceholder)
             return;
         _suppress = true;
-        PasswordInput.Clear();
+        PasswordInput.Password = string.Empty;
         _suppress = false;
-        _showingPlaceholder = false;
+        HidePlaceholder();
     }
 
     private void PasswordInput_LostKeyboardFocus(object sender, RoutedEventArgs e)
@@ -79,7 +100,7 @@ public partial class EntryEditView : UserControl
             _suppress = true;
             PasswordInput.Password = _vm.Password;
             _suppress = false;
-            _showingPlaceholder = false;
+            HidePlaceholder();
             _userEdited = true;
         }
     }
@@ -89,7 +110,7 @@ public partial class EntryEditView : UserControl
         if (_suppress || _vm is null)
             return;
         _userEdited = true;
-        _showingPlaceholder = false;
+        HidePlaceholder();
         _vm.Password = PasswordInput.Password;
     }
 

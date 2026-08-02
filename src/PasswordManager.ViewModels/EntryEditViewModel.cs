@@ -22,6 +22,12 @@ public sealed partial class EntryEditViewModel : ObservableObject
     {
         _vault = vault;
         _original = existing;
+        KnownSites = vault.Entries
+            .Select(e => e.Title)
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
         if (existing is not null)
         {
             Title = existing.Title;
@@ -36,6 +42,12 @@ public sealed partial class EntryEditViewModel : ObservableObject
 
     /// <summary>새 항목 작성 여부(false면 기존 항목 편집).</summary>
     public bool IsNew => _original is null;
+
+    /// <summary>
+    /// 볼트에 이미 있는 사이트명들(중복 제거·이름순, 휴지통 제외). 사이트명 칸의 드롭다운 후보로,
+    /// 고르면 <see cref="ApplySite"/>가 URL·태그를 함께 채운다(TD-046). 폼을 여는 시점의 스냅샷이다.
+    /// </summary>
+    public IReadOnlyList<string> KnownSites { get; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -113,6 +125,30 @@ public sealed partial class EntryEditViewModel : ObservableObject
             });
         }
         Saved?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 드롭다운에서 기존 사이트명을 고르면 그 사이트의 URL·태그를 함께 채운다(TD-046).
+    /// 같은 사이트명 항목이 여럿이면 가장 최근에 수정된 항목을 기준으로 삼고,
+    /// 사용자가 이미 친 값은 지우지 않는다 — URL은 비어 있을 때만 채우고 태그는 없는 것만 더한다.
+    /// 목록에 없는 이름(직접 입력)은 아무것도 하지 않는다.
+    /// </summary>
+    [RelayCommand]
+    private void ApplySite(string? site)
+    {
+        if (string.IsNullOrWhiteSpace(site)) return;
+
+        var source = _vault.Entries
+            .Where(e => string.Equals(e.Title, site, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(e => e.UpdatedAt)
+            .FirstOrDefault();
+        if (source is null) return;
+
+        Title = source.Title;
+        if (string.IsNullOrWhiteSpace(Url)) Url = source.Url;
+        foreach (var tag in source.Tags)
+            if (!Tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)))
+                Tags.Add(tag);
     }
 
     /// <summary>입력창의 현재 텍스트를 태그 칩으로 옮긴다. '#'·공백·쉼표로 나눠 여러 개를 한 번에 처리하고,

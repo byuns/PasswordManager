@@ -17,7 +17,12 @@
                 <Run Text="사이트명" />
                 <Run Text="*" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
             </ui:TextBlock>
-            <ui:TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
+            <!-- 이미 쓰는 사이트는 드롭다운에서 고르면 URL·태그가 함께 채워지고,
+                 목록에 없으면 그대로 타이핑해 직접 입력한다(TD-046). -->
+            <ComboBox x:Name="TitleInput" IsEditable="True" StaysOpenOnEdit="True"
+                      ItemsSource="{Binding KnownSites}"
+                      Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                      SelectionChanged="TitleInput_SelectionChanged" />
 
             <ui:TextBlock Text="주소(URL)" Margin="0,12,0,4" />
             <ui:TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" />
@@ -37,10 +42,12 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <PasswordBox x:Name="PasswordInput" Grid.Column="0"
-                             PasswordChanged="PasswordInput_PasswordChanged"
-                             GotKeyboardFocus="PasswordInput_GotKeyboardFocus"
-                             LostKeyboardFocus="PasswordInput_LostKeyboardFocus" />
+                <!-- 눈 버튼(RevealButtonEnabled)으로 지금 입력한 비번을 직접 확인할 수 있다(TD-047).
+                     기존 비번을 고정 마스킹으로 보여주는 동안에는 code-behind가 버튼을 감춘다. -->
+                <ui:PasswordBox x:Name="PasswordInput" Grid.Column="0" RevealButtonEnabled="True"
+                                PasswordChanged="PasswordInput_PasswordChanged"
+                                GotKeyboardFocus="PasswordInput_GotKeyboardFocus"
+                                LostKeyboardFocus="PasswordInput_LostKeyboardFocus" />
                 <ui:Button Grid.Column="1" Content="생성" Icon="{ui:SymbolIcon Password24}"
                            Margin="8,0,0,0" Command="{Binding GeneratePasswordCommand}" />
             </Grid>

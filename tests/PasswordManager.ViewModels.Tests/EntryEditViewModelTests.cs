@@ -251,6 +251,115 @@ public class EntryEditViewModelTests
         Assert.Equal("old-pw", original.Password);
     }
 
+    // ── 기존 사이트명 선택(TD-046) ──
+
+    [Fact]
+    public void KnownSites_lists_distinct_titles_in_name_order()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry { Title = "Steam", Login = "a", Password = "pw" });
+        manager.Add(new VaultEntry { Title = "GitHub", Login = "b", Password = "pw" });
+        manager.Add(new VaultEntry { Title = "github", Login = "c", Password = "pw" }); // 대소문자 무시 중복
+
+        var vm = new EntryEditViewModel(manager);
+
+        Assert.Equal(new[] { "GitHub", "Steam" }, vm.KnownSites);
+    }
+
+    [Fact]
+    public void KnownSites_excludes_trashed_entries()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry { Title = "Steam", Login = "a", Password = "pw" });
+        manager.Add(new VaultEntry { Title = "GitHub", Login = "b", Password = "pw" });
+        manager.Remove(manager.Entries.First(e => e.Title == "GitHub").Id);
+
+        var vm = new EntryEditViewModel(manager);
+
+        Assert.Equal(new[] { "Steam" }, vm.KnownSites);
+    }
+
+    [Fact]
+    public void ApplySite_fills_title_url_and_tags()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry
+        {
+            Title = "GitHub", Url = "https://github.com", Login = "a", Password = "pw",
+            Tags = { "work", "dev" },
+        });
+        var vm = new EntryEditViewModel(manager);
+
+        vm.ApplySiteCommand.Execute("GitHub");
+
+        Assert.Equal("GitHub", vm.Title);
+        Assert.Equal("https://github.com", vm.Url);
+        Assert.Equal(new[] { "work", "dev" }, vm.Tags);
+    }
+
+    [Fact]
+    public void ApplySite_uses_most_recently_updated_entry_of_same_site()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry { Title = "GitHub", Url = "old.example", Login = "a", Password = "pw" });
+        manager.Add(new VaultEntry { Title = "GitHub", Url = "new.example", Login = "b", Password = "pw" });
+        // 첫 항목을 나중에 수정해 UpdatedAt을 최신으로 만든다.
+        var first = manager.Entries.First(e => e.Url == "old.example");
+        manager.Update(new VaultEntry
+        {
+            Id = first.Id, Title = first.Title, Url = "newest.example",
+            Login = first.Login, Password = first.Password,
+        }, DateTimeOffset.UtcNow.AddMinutes(1));
+
+        var vm = new EntryEditViewModel(manager);
+        vm.ApplySiteCommand.Execute("GitHub");
+
+        Assert.Equal("newest.example", vm.Url);
+    }
+
+    [Fact]
+    public void ApplySite_keeps_url_already_typed()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry { Title = "GitHub", Url = "https://github.com", Login = "a", Password = "pw" });
+        var vm = new EntryEditViewModel(manager) { Url = "https://my.enterprise.github" };
+
+        vm.ApplySiteCommand.Execute("GitHub");
+
+        Assert.Equal("https://my.enterprise.github", vm.Url); // 사용자가 친 값 우선
+    }
+
+    [Fact]
+    public void ApplySite_merges_tags_without_duplicates()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry
+        {
+            Title = "GitHub", Login = "a", Password = "pw", Tags = { "work", "dev" },
+        });
+        var vm = new EntryEditViewModel(manager);
+        vm.TagInput = "WORK 개인"; vm.AddTagCommand.Execute(null);
+
+        vm.ApplySiteCommand.Execute("GitHub");
+
+        Assert.Equal(new[] { "WORK", "개인", "dev" }, vm.Tags); // 기존 칩 유지 + 없는 것만 추가
+    }
+
+    [Fact]
+    public void ApplySite_ignores_unknown_or_blank_site()
+    {
+        var manager = Unlocked();
+        manager.Add(new VaultEntry { Title = "GitHub", Url = "https://github.com", Login = "a", Password = "pw" });
+        var vm = new EntryEditViewModel(manager) { Title = "새 사이트" };
+
+        vm.ApplySiteCommand.Execute("없는사이트");
+        vm.ApplySiteCommand.Execute("");
+        vm.ApplySiteCommand.Execute(null);
+
+        Assert.Equal("새 사이트", vm.Title);
+        Assert.Equal("", vm.Url);
+    }
+
     [Fact]
     public void GeneratePassword_fills_password_with_requested_length()
     {
