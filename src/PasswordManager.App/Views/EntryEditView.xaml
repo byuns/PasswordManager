@@ -18,8 +18,11 @@
                 <Run Text="*" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
             </ui:TextBlock>
             <!-- 이미 쓰는 사이트는 드롭다운에서 고르면 URL·태그가 함께 채워지고,
-                 목록에 없으면 그대로 타이핑해 직접 입력한다(TD-046). -->
+                 목록에 없으면 그대로 타이핑해 직접 입력한다(TD-046).
+                 IsTextSearchEnabled=False: 타이핑 중 인라인 자동완성을 끈다. 켜져 있으면 기존 사이트와
+                 앞글자가 겹치는 새 이름을 칠 때 멋대로 완성되고, 그 선택으로 URL·태그까지 딸려온다. -->
             <ComboBox x:Name="TitleInput" IsEditable="True" StaysOpenOnEdit="True"
+                      IsTextSearchEnabled="False"
                       ItemsSource="{Binding KnownSites}"
                       Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
                       SelectionChanged="TitleInput_SelectionChanged" />
