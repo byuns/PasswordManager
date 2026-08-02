@@ -28,8 +28,8 @@ public partial class SettingsView : UserControl
         if (Vm is null) return;
         Vm.BackupRequested += OnBackupRequested;
         Vm.RestoreRequested += OnRestoreRequested;
-        Vm.ExportRequested += OnExportRequested;
-        Vm.ImportRequested += OnImportRequested;
+        Vm.ExportEncryptedReady += OnExportEncryptedReady;
+        Vm.ImportEncryptedRequested += OnImportEncryptedRequested;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -37,8 +37,36 @@ public partial class SettingsView : UserControl
         if (Vm is null) return;
         Vm.BackupRequested -= OnBackupRequested;
         Vm.RestoreRequested -= OnRestoreRequested;
-        Vm.ExportRequested -= OnExportRequested;
-        Vm.ImportRequested -= OnImportRequested;
+        Vm.ExportEncryptedReady -= OnExportEncryptedReady;
+        Vm.ImportEncryptedRequested -= OnImportEncryptedRequested;
+    }
+
+    /// <summary>VM이 복구 키로 봉인한 바이트를 넘겨주면 저장 위치를 물어 파일로 쓴다(TD-050).</summary>
+    private void OnExportEncryptedReady(object? sender, byte[] file)
+    {
+        var dlg = new SaveFileDialog
+        {
+            Title = "잠긴 내보내기",
+            FileName = "passwords.pmexport",
+            Filter = "잠긴 내보내기 (*.pmexport)|*.pmexport|모든 파일 (*.*)|*.*",
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        File.WriteAllBytes(dlg.FileName, file);
+        Vm!.StatusMessage = "잠긴 내보내기를 완료했습니다.";
+    }
+
+    /// <summary>잠긴 파일을 골라 VM에 넘긴다 — 복구 키는 VM이 물어본다(TD-050).</summary>
+    private async void OnImportEncryptedRequested(object? sender, EventArgs e)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "잠긴 파일 가져오기",
+            Filter = "잠긴 내보내기 (*.pmexport)|*.pmexport|모든 파일 (*.*)|*.*",
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        await Vm!.PerformEncryptedImportAsync(File.ReadAllBytes(dlg.FileName));
     }
 
     private void OnBackupRequested(object? sender, EventArgs e)
@@ -70,36 +98,4 @@ public partial class SettingsView : UserControl
             Vm!.PerformRestore(dlg.FileName);
     }
 
-    private void OnExportRequested(object? sender, EventArgs e)
-    {
-        var warn = MessageBox.Show(
-            "CSV 내보내기는 비밀번호를 평문으로 저장합니다. 누구나 열어볼 수 있으니 안전한 위치에만 보관하고,\n" +
-            "사용 후 삭제를 권장합니다. 계속할까요?",
-            "CSV 내보내기", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
-        if (warn != MessageBoxResult.OK) return;
-
-        var dlg = new SaveFileDialog
-        {
-            Title = "CSV 내보내기",
-            FileName = "passwords.csv",
-            Filter = "CSV 파일 (*.csv)|*.csv|모든 파일 (*.*)|*.*",
-        };
-        if (dlg.ShowDialog() != true) return;
-
-        File.WriteAllText(dlg.FileName, Vm!.BuildExportCsv(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-        Vm.StatusMessage = "CSV 내보내기를 완료했습니다.";
-    }
-
-    private void OnImportRequested(object? sender, EventArgs e)
-    {
-        var dlg = new OpenFileDialog
-        {
-            Title = "CSV 가져오기",
-            Filter = "CSV 파일 (*.csv)|*.csv|모든 파일 (*.*)|*.*",
-        };
-        if (dlg.ShowDialog() != true) return;
-
-        var csv = File.ReadAllText(dlg.FileName);
-        Vm!.PerformImport(csv);
-    }
 }

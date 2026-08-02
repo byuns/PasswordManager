@@ -679,6 +679,9 @@ public class ShellViewModelTests
             return Task.FromResult(ConfirmResult);
         }
         public void Notify(string title, string message) { }
+
+        public Task<string?> PromptAsync(string title, string message, string placeholder,
+            string confirmText, string cancelText) => Task.FromResult<string?>(null);
     }
 
     /// <summary>언락 화면이 뜬 셸과, 볼트 사이드카가 전부 존재하는 가짜 파일 시스템을 만든다.</summary>

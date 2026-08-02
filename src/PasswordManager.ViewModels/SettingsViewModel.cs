@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using PasswordManager.Core.Models;
 using PasswordManager.Core.Notifications;
 using PasswordManager.Core.Vault;
+using PasswordManager.ViewModels.Services;
 
 namespace PasswordManager.ViewModels;
 
@@ -14,10 +15,12 @@ namespace PasswordManager.ViewModels;
 public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly VaultManager _vault;
+    private readonly IDialogService? _dialog; // 복구 키 입력 프롬프트(없으면 잠긴 내보내기 비활성)
 
-    public SettingsViewModel(VaultManager vault)
+    public SettingsViewModel(VaultManager vault, IDialogService? dialog = null)
     {
         _vault = vault;
+        _dialog = dialog;
         _autoLockMinutes = vault.AutoLockMinutes;
         _clipboardClearSeconds = vault.ClipboardClearSeconds;
 
@@ -129,12 +132,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>복원 요청. 뷰가 백업 파일 선택 대화상자를 연다.</summary>
     public event EventHandler? RestoreRequested;
 
-    /// <summary>내보내기 요청. 뷰가 저장 위치 대화상자를 연다(평문 CSV — 경고 후).</summary>
-    public event EventHandler? ExportRequested;
-
-    /// <summary>가져오기 요청. 뷰가 CSV 파일 선택 대화상자를 연다.</summary>
-    public event EventHandler? ImportRequested;
-
     /// <summary>복원으로 세션이 닫혔을 때 발생. 셸이 언락 화면으로 돌아간다.</summary>
     public event EventHandler? Locked;
 
@@ -174,12 +171,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void Restore() => RestoreRequested?.Invoke(this, EventArgs.Empty);
 
-    [RelayCommand]
-    private void Export() => ExportRequested?.Invoke(this, EventArgs.Empty);
-
-    [RelayCommand]
-    private void Import() => ImportRequested?.Invoke(this, EventArgs.Empty);
-
     /// <summary>시간 설정을 허용 범위로 보정해 저장하고, 실행 중인 컴포넌트에 반영하도록 알린다.</summary>
     [RelayCommand]
     private void SaveTimeSettings()
@@ -217,15 +208,79 @@ public sealed partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void ResetTemplate() => MessageTemplate = SlackSettings.DefaultTemplate;
 
-    /// <summary>현재 항목을 CSV(평문)로 만들어 돌려준다. 뷰가 경고 후 파일에 쓴다(design 7.7).</summary>
-    public string BuildExportCsv() => _vault.ExportCsv();
+    // ── 복구 키로 잠근 내보내기·가져오기 (TD-050) ──
+    // 평문 CSV 경로는 UI에서 걷어냈다 — 내보내기는 평문 파일을 새로 만들어 위험을 낳고,
+    // 가져오기는 그 짝이라 함께 정리했다. CSV 직렬화 자체는 잠긴 내보내기가 속으로 계속 쓴다.
 
-    /// <summary>뷰가 읽어온 CSV 텍스트로 항목을 가져오고(모두 새 항목 추가) 개수를 돌려준다.</summary>
-    public int PerformImport(string csv)
+    /// <summary>잠긴 내보내기 파일이 준비됐을 때 발생. 뷰가 저장 위치를 물어 바이트를 파일에 쓴다.</summary>
+    public event EventHandler<byte[]>? ExportEncryptedReady;
+
+    /// <summary>잠긴 파일 가져오기 요청. 뷰가 파일 선택 대화상자를 연다.</summary>
+    public event EventHandler? ImportEncryptedRequested;
+
+    /// <summary>
+    /// 복구 키를 물어 확인한 뒤, 활성 항목을 그 키로 잠근 파일로 만들어
+    /// <see cref="ExportEncryptedReady"/>로 뷰에 넘긴다. 취소하면 조용히 끝내고,
+    /// 이 볼트의 복구 키가 아니면 알림만 띄운다(틀린 키로 잠그면 영영 못 연다).
+    /// </summary>
+    [RelayCommand]
+    private async Task ExportEncryptedAsync()
     {
-        var count = _vault.ImportCsv(csv);
-        StatusMessage = $"{count}개 계정을 가져왔습니다.";
-        return count;
+        if (_dialog is null) return;
+
+        var code = await _dialog.PromptAsync(
+            "잠긴 내보내기",
+            "이 볼트의 복구 키를 입력하세요. 내보낸 파일은 이 복구 키로만 열 수 있습니다.\n" +
+            "나중에 복구 키를 재발급해도 이 파일은 지금 키로 열립니다.",
+            "XXXX-XXXX-XXXX-…", "내보내기", "취소");
+        if (string.IsNullOrWhiteSpace(code)) return; // 취소 — 오류가 아니다
+
+        byte[] file;
+        try
+        {
+            file = _vault.ExportEncrypted(code);
+        }
+        catch (InvalidRecoveryKeyException)
+        {
+            _dialog.Notify("복구 키 불일치", "이 볼트의 복구 키가 아닙니다. 다시 확인해 주세요.");
+            return;
+        }
+
+        ExportEncryptedReady?.Invoke(this, file);
+    }
+
+    /// <summary>잠긴 파일 가져오기 시작 — 뷰가 파일을 골라 <see cref="PerformEncryptedImportAsync"/>를 부른다.</summary>
+    [RelayCommand]
+    private void ImportEncrypted() => ImportEncryptedRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// 뷰가 읽어온 잠긴 파일을 복구 키를 물어 풀고 항목을 가져온다. 판정 기준은 그 파일을 봉인한
+    /// 복구 키다 — 현재 볼트의 것과 달라도 된다. 실패는 알림으로 알리고 아무것도 추가하지 않는다.
+    /// </summary>
+    public async Task PerformEncryptedImportAsync(byte[] file)
+    {
+        if (_dialog is null) return;
+
+        var code = await _dialog.PromptAsync(
+            "잠긴 파일 가져오기",
+            "이 파일을 내보낼 때 사용한 복구 키를 입력하세요.",
+            "XXXX-XXXX-XXXX-…", "가져오기", "취소");
+        if (string.IsNullOrWhiteSpace(code)) return;
+
+        try
+        {
+            var count = _vault.ImportEncrypted(file, code);
+            StatusMessage = $"{count}개 계정을 가져왔습니다.";
+            _dialog.Notify("가져옴", $"{count}개 계정을 가져왔습니다.");
+        }
+        catch (InvalidRecoveryKeyException)
+        {
+            _dialog.Notify("복구 키 불일치", "이 파일을 열 수 있는 복구 키가 아닙니다.");
+        }
+        catch (FormatException)
+        {
+            _dialog.Notify("형식 오류", "잠긴 내보내기(.pmexport) 파일이 아닙니다.");
+        }
     }
 
     /// <summary>선택한 경로로 볼트를 백업한다(뷰가 대화상자에서 경로를 받아 호출).</summary>

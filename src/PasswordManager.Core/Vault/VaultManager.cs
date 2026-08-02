@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using PasswordManager.Core.Models;
 using PasswordManager.Core.Security;
@@ -302,6 +303,95 @@ public sealed class VaultManager
 
     /// <summary>활성 항목들을 자체 CSV(평문)로 내보낸다(휴지통 제외). 호출부가 강한 경고를 거쳐야 한다(design 7.7).</summary>
     public string ExportCsv() => CsvVault.Export(Entries);
+
+    /// <summary>
+    /// 입력한 복구 키가 이 볼트의 것인지 상태 변경 없이 확인한다(TD-050). 형식이 깨졌거나
+    /// 다른 볼트의 키면 false. 헤더의 복구 래핑을 풀어보는 것으로 판정한다.
+    /// </summary>
+    public bool VerifyRecoveryKey(string recoveryCode)
+    {
+        var vault = _current ?? _store.Load(_path);
+        byte[] key;
+        try
+        {
+            key = RecoveryCode.Decode(recoveryCode);
+        }
+        catch (FormatException)
+        {
+            return false; // 복구 키 알파벳에 없는 문자
+        }
+
+        try
+        {
+            KeyWrap.Unwrap(key, vault.Header.DekByRecovery);
+            return true;
+        }
+        catch (Exception e) when (e is CryptographicException or ArgumentException)
+        {
+            return false; // 키가 틀렸거나 길이가 안 맞음
+        }
+        finally
+        {
+            MemoryHygiene.Clear(key);
+        }
+    }
+
+    /// <summary>
+    /// 활성 항목을 복구 키로 잠근 파일로 내보낸다(TD-050). 봉인 전에 이 볼트의 복구 키가 맞는지
+    /// 확인한다 — 틀린 키로 잠그면 그 파일은 영영 열 수 없다. 아니면 <see cref="InvalidRecoveryKeyException"/>.
+    /// </summary>
+    public byte[] ExportEncrypted(string recoveryCode)
+    {
+        RequireUnlocked();
+        if (!VerifyRecoveryKey(recoveryCode))
+            throw new InvalidRecoveryKeyException();
+
+        var key = RecoveryCode.Decode(recoveryCode);
+        try
+        {
+            return EncryptedExport.Protect(key, ExportCsv());
+        }
+        finally
+        {
+            MemoryHygiene.Clear(key);
+        }
+    }
+
+    /// <summary>
+    /// 잠긴 내보내기 파일을 복구 키로 풀어 항목을 가져오고(모두 새 항목으로 추가) 개수를 돌려준다.
+    /// 판정 기준은 <b>그 파일을 봉인한 복구 키</b>다 — 현재 볼트의 복구 키와 대조하지 않으므로,
+    /// 다른 볼트에서 내보낸 파일도 그때의 복구 키만 있으면 가져올 수 있다(TD-050).
+    /// </summary>
+    public int ImportEncrypted(byte[] file, string recoveryCode)
+    {
+        RequireUnlocked();
+
+        byte[] key;
+        try
+        {
+            key = RecoveryCode.Decode(recoveryCode);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidRecoveryKeyException();
+        }
+
+        string csv;
+        try
+        {
+            csv = EncryptedExport.Unprotect(key, file);
+        }
+        catch (ArgumentException)
+        {
+            throw new InvalidRecoveryKeyException(); // 키 길이가 안 맞음
+        }
+        finally
+        {
+            MemoryHygiene.Clear(key);
+        }
+
+        return ImportCsv(csv);
+    }
 
     /// <summary>
     /// CSV에서 항목을 읽어 모두 새 항목으로 추가하고 저장한다(중복 검사 없이 append). 추가한 개수를 돌려준다.

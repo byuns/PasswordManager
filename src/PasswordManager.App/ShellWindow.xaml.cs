@@ -49,21 +49,23 @@ public partial class ShellWindow : FluentWindow
     private void OnShellLoaded(object sender, RoutedEventArgs e)
     {
         if (DataContext is ShellViewModel shell)
-            shell.Dialog ??= new WpfUiDialogService(ShowConfirmAsync, RootSnackbar);
+            shell.Dialog ??= new WpfUiDialogService(ShowConfirmAsync, ShowPromptAsync, RootSnackbar);
     }
 
     private TaskCompletionSource<bool>? _confirmTcs;
+    private TaskCompletionSource<string?>? _promptTcs;
 
     /// <summary>커스텀 확인 오버레이를 띄우고 사용자의 선택(확인=true/취소=false)을 비동기로 돌려준다.</summary>
     private Task<bool> ShowConfirmAsync(string title, string message, string confirmText, string cancelText)
     {
-        // 앞선 확인이 남아 있으면 취소로 정리한다(중복 표시 방지).
-        _confirmTcs?.TrySetResult(false);
+        DismissPending();
 
         ConfirmTitle.Text = title;
         ConfirmMessage.Text = message;
         ConfirmOkButton.Content = confirmText;
+        ConfirmOkButton.Appearance = ControlAppearance.Danger;
         ConfirmCancelButton.Content = cancelText;
+        ConfirmInput.Visibility = Visibility.Collapsed;
 
         _confirmTcs = new TaskCompletionSource<bool>();
         ConfirmOverlay.Visibility = Visibility.Visible;
@@ -73,16 +75,56 @@ public partial class ShellWindow : FluentWindow
         return _confirmTcs.Task;
     }
 
+    /// <summary>
+    /// 같은 오버레이에 한 줄 입력창을 띄우고 입력값을 돌려준다(취소=null). 복구 키처럼 그 자리에서
+    /// 받아 쓰고 버리는 값에 쓴다(TD-050). 파괴적 동작이 아니므로 기본 포커스는 입력창에 둔다.
+    /// </summary>
+    private Task<string?> ShowPromptAsync(
+        string title, string message, string placeholder, string confirmText, string cancelText)
+    {
+        DismissPending();
+
+        ConfirmTitle.Text = title;
+        ConfirmMessage.Text = message;
+        ConfirmOkButton.Content = confirmText;
+        ConfirmOkButton.Appearance = ControlAppearance.Primary;
+        ConfirmCancelButton.Content = cancelText;
+        ConfirmInput.Text = string.Empty;
+        ConfirmInput.PlaceholderText = placeholder;
+        ConfirmInput.Visibility = Visibility.Visible;
+
+        _promptTcs = new TaskCompletionSource<string?>();
+        ConfirmOverlay.Visibility = Visibility.Visible;
+        Dispatcher.BeginInvoke(new Action(() => ConfirmInput.Focus()), DispatcherPriority.Input);
+        return _promptTcs.Task;
+    }
+
+    /// <summary>앞선 확인·입력이 떠 있으면 취소로 정리한다(중복 표시 방지).</summary>
+    private void DismissPending()
+    {
+        _confirmTcs?.TrySetResult(false);
+        _confirmTcs = null;
+        _promptTcs?.TrySetResult(null);
+        _promptTcs = null;
+    }
+
     private void OnConfirmOk(object sender, RoutedEventArgs e) => CloseConfirm(true);
 
     private void OnConfirmCancel(object sender, RoutedEventArgs e) => CloseConfirm(false);
 
     private void CloseConfirm(bool result)
     {
+        var typed = ConfirmInput.Text;
         ConfirmOverlay.Visibility = Visibility.Collapsed;
-        var tcs = _confirmTcs;
+        ConfirmInput.Visibility = Visibility.Collapsed;
+        ConfirmInput.Text = string.Empty; // 입력한 복구 키를 창에 남겨두지 않는다
+
+        var confirm = _confirmTcs;
+        var prompt = _promptTcs;
         _confirmTcs = null;
-        tcs?.TrySetResult(result);
+        _promptTcs = null;
+        confirm?.TrySetResult(result);
+        prompt?.TrySetResult(result ? typed : null);
     }
 
     /// <summary>본문(CurrentViewModel) 전환 시 짧게 fade-in 한다. 뷰 재사용 여부와 무관하게

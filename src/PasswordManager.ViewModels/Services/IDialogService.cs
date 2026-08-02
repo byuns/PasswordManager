@@ -11,4 +11,11 @@ public interface IDialogService
 
     /// <summary>하단에 잠시 떴다 자동으로 사라지는 완료 토스트를 표시한다.</summary>
     void Notify(string title, string message);
+
+    /// <summary>
+    /// 한 줄 입력을 받는 창을 띄우고 입력값을 돌려준다(취소하면 null). 복구 키처럼 그 자리에서
+    /// 받아야 하고 볼트에 저장하지 않는 값에 쓴다(TD-050).
+    /// </summary>
+    Task<string?> PromptAsync(string title, string message, string placeholder,
+        string confirmText, string cancelText);
 }

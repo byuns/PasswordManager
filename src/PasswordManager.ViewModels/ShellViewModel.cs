@@ -261,7 +261,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_settings is null)
         {
-            _settings = new SettingsViewModel(_vault);
+            _settings = new SettingsViewModel(_vault, Dialog); // 복구 키 프롬프트에 필요(TD-050)
             _settings.OtpSetupRequested += OnOtpSetupRequested;
             _settings.ChangeMasterRequested += OnChangeMasterRequested;
             _settings.ReissueRecoveryRequested += OnReissueRecoveryRequested;

@@ -96,6 +96,9 @@
                     <ui:TextBlock x:Name="ConfirmTitle" FontTypography="BodyStrong" Margin="0,0,0,8" />
                     <ui:TextBlock x:Name="ConfirmMessage" TextWrapping="Wrap"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <!-- 입력이 필요한 경우(복구 키 등)에만 보인다 — PromptAsync가 켠다(TD-050) -->
+                    <ui:TextBox x:Name="ConfirmInput" Visibility="Collapsed" Margin="0,12,0,0"
+                                FontFamily="Consolas" TextWrapping="Wrap" AcceptsReturn="False" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                         <ui:Button x:Name="ConfirmCancelButton" Content="취소" MinWidth="84"
                                    IsCancel="True" Click="OnConfirmCancel" Margin="0,0,8,0" />

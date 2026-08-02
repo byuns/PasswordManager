@@ -26,6 +26,130 @@ public class SettingsViewModelTests
         return m;
     }
 
+    /// <summary>복구 키 문자열까지 함께 돌려주는 변형(잠긴 내보내기 검증용, TD-050).</summary>
+    private static (VaultManager Manager, string RecoveryCode) UnlockedWithRecovery()
+    {
+        var m = new VaultManager(new InMemoryStore(), Path);
+        var key = m.CreateNew(Master, Light);
+        return (m, RecoveryCode.Encode(key));
+    }
+
+    /// <summary>프롬프트 응답을 미리 정해두고 호출을 기록하는 가짜 다이얼로그.</summary>
+    private sealed class FakeDialog : Services.IDialogService
+    {
+        public string? PromptResult { get; set; }
+        public int PromptCount { get; private set; }
+        public string? LastNotifyMessage { get; private set; }
+
+        public Task<bool> ConfirmAsync(string t, string m, string c, string x) => Task.FromResult(true);
+
+        public void Notify(string title, string message) => LastNotifyMessage = message;
+
+        public Task<string?> PromptAsync(string title, string message, string placeholder,
+            string confirmText, string cancelText)
+        {
+            PromptCount++;
+            return Task.FromResult(PromptResult);
+        }
+    }
+
+    // ── 복구 키로 잠근 내보내기·가져오기 (TD-050) ──
+
+    [Fact]
+    public async Task ExportEncrypted_prompts_for_key_and_hands_sealed_bytes_to_the_view()
+    {
+        var (manager, code) = UnlockedWithRecovery();
+        manager.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "s3cr3t" });
+        var dialog = new FakeDialog { PromptResult = code };
+        var vm = new SettingsViewModel(manager, dialog);
+        byte[]? handed = null;
+        vm.ExportEncryptedReady += (_, bytes) => handed = bytes;
+
+        await vm.ExportEncryptedCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, dialog.PromptCount);
+        Assert.NotNull(handed);
+        Assert.DoesNotContain("s3cr3t", System.Text.Encoding.UTF8.GetString(handed!));
+    }
+
+    [Fact]
+    public async Task ExportEncrypted_cancelled_prompt_does_nothing()
+    {
+        var (manager, _) = UnlockedWithRecovery();
+        var dialog = new FakeDialog { PromptResult = null }; // 취소
+        var vm = new SettingsViewModel(manager, dialog);
+        var raised = false;
+        vm.ExportEncryptedReady += (_, _) => raised = true;
+
+        await vm.ExportEncryptedCommand.ExecuteAsync(null);
+
+        Assert.False(raised);
+        Assert.Null(dialog.LastNotifyMessage); // 취소는 오류가 아니다 — 잔소리하지 않는다
+    }
+
+    [Fact]
+    public async Task ExportEncrypted_wrong_key_notifies_and_produces_no_file()
+    {
+        var (manager, _) = UnlockedWithRecovery();
+        var (_, otherCode) = UnlockedWithRecovery();
+        var dialog = new FakeDialog { PromptResult = otherCode };
+        var vm = new SettingsViewModel(manager, dialog);
+        var raised = false;
+        vm.ExportEncryptedReady += (_, _) => raised = true;
+
+        await vm.ExportEncryptedCommand.ExecuteAsync(null);
+
+        Assert.False(raised);
+        Assert.NotNull(dialog.LastNotifyMessage);
+    }
+
+    [Fact]
+    public async Task PerformEncryptedImport_adds_entries_with_the_files_key()
+    {
+        var (source, code) = UnlockedWithRecovery();
+        source.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "s3cr3t" });
+        var file = source.ExportEncrypted(code);
+
+        var (target, _) = UnlockedWithRecovery();
+        var dialog = new FakeDialog { PromptResult = code };
+        var vm = new SettingsViewModel(target, dialog);
+
+        await vm.PerformEncryptedImportAsync(file);
+
+        Assert.Equal("Steam", Assert.Single(target.Entries).Title);
+    }
+
+    [Fact]
+    public async Task PerformEncryptedImport_wrong_key_notifies_and_imports_nothing()
+    {
+        var (source, code) = UnlockedWithRecovery();
+        source.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "s3cr3t" });
+        var file = source.ExportEncrypted(code);
+
+        var (target, targetCode) = UnlockedWithRecovery();
+        var dialog = new FakeDialog { PromptResult = targetCode };
+        var vm = new SettingsViewModel(target, dialog);
+
+        await vm.PerformEncryptedImportAsync(file);
+
+        Assert.Empty(target.Entries);
+        Assert.NotNull(dialog.LastNotifyMessage);
+    }
+
+    [Fact]
+    public async Task PerformEncryptedImport_rejects_a_plain_csv_file()
+    {
+        var (target, code) = UnlockedWithRecovery();
+        var plain = System.Text.Encoding.UTF8.GetBytes("title,url,login,password,notes,tags\r\n");
+        var dialog = new FakeDialog { PromptResult = code };
+        var vm = new SettingsViewModel(target, dialog);
+
+        await vm.PerformEncryptedImportAsync(plain);
+
+        Assert.Empty(target.Entries);
+        Assert.NotNull(dialog.LastNotifyMessage); // 암호 문제가 아니라 형식 문제로 안내
+    }
+
     [Fact]
     public void SetupOtp_raises_OtpSetupRequested()
     {
@@ -98,45 +222,15 @@ public class SettingsViewModelTests
     }
 
     [Fact]
-    public void Export_and_Import_commands_raise_requests()
+    public void ImportEncrypted_command_raises_request()
     {
-        var vm = new SettingsViewModel(Unlocked());
-        var export = false; var import = false;
-        vm.ExportRequested += (_, _) => export = true;
-        vm.ImportRequested += (_, _) => import = true;
+        var vm = new SettingsViewModel(Unlocked(), new FakeDialog());
+        var raised = false;
+        vm.ImportEncryptedRequested += (_, _) => raised = true;
 
-        vm.ExportCommand.Execute(null);
-        vm.ImportCommand.Execute(null);
+        vm.ImportEncryptedCommand.Execute(null);
 
-        Assert.True(export);
-        Assert.True(import);
-    }
-
-    [Fact]
-    public void BuildExportCsv_returns_current_entries_as_csv()
-    {
-        var m = Unlocked();
-        m.Add(new VaultEntry { Title = "Steam", Login = "gamer", Password = "pw" });
-        var vm = new SettingsViewModel(m);
-
-        var csv = vm.BuildExportCsv();
-
-        Assert.Contains("title,url,login,password,notes,tags", csv);
-        Assert.Contains("Steam", csv);
-    }
-
-    [Fact]
-    public void PerformImport_adds_entries_and_reports_count()
-    {
-        var m = Unlocked();
-        var vm = new SettingsViewModel(m);
-        var csv = "title,url,login,password,notes,tags\r\nSteam,,gamer,pw,,\r\n";
-
-        var count = vm.PerformImport(csv);
-
-        Assert.Equal(1, count);
-        Assert.Single(m.Entries);
-        Assert.False(string.IsNullOrEmpty(vm.StatusMessage));
+        Assert.True(raised);
     }
 
     [Fact]
