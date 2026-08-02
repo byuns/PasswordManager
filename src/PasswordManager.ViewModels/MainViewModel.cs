@@ -196,10 +196,20 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         // 필터·삭제로 화면에서 사라진 항목이 선택된 채 남으면 단축키가 안 보이는 행을 건드리게 된다.
-        if (SelectedEntry is not null && !filtered.Contains(SelectedEntry))
-            Select(null, inFavorites: false);
-        else if (SelectionInFavorites && SelectedEntry?.IsPinned != true)
-            SelectionInFavorites = false; // 핀이 풀리면 즐겨찾기 그룹 자체가 없어진다
+        // 편집 저장은 항목을 새 인스턴스로 교체하므로(TD-021) 참조가 아니라 id로 뒤쫓는다 —
+        // 그러지 않으면 편집하고 돌아왔을 때 선택이 조용히 풀려 그 행으로 되돌아갈 수 없다(TD-049).
+        if (SelectedEntry is not null)
+        {
+            var still = filtered.FirstOrDefault(e => e.Id == SelectedEntry.Id);
+            if (still is null)
+                Select(null, inFavorites: false);
+            else
+            {
+                if (!ReferenceEquals(still, SelectedEntry)) SelectedEntry = still;
+                if (SelectionInFavorites && !still.IsPinned)
+                    SelectionInFavorites = false; // 핀이 풀리면 즐겨찾기 그룹 자체가 없어진다
+            }
+        }
 
         // OTP 등록 상태가 바뀌었을 수 있으니(예: 등록 후 복귀) 행 버튼 전환용 플래그를 갱신 통지한다.
         OnPropertyChanged(nameof(HasOtp));

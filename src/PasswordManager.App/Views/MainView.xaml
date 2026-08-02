@@ -117,15 +117,17 @@
                  숨기고, 마우스 휠로 가로 슬라이딩한다(코드비하인드 TagScroll_PreviewMouseWheel). -->
             <ScrollViewer x:Name="TagScroll" Grid.Column="0"
                           HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
-                          PreviewMouseWheel="TagScroll_PreviewMouseWheel">
-                <!-- 오른쪽 끝을 살짝 투명하게(페이드) 해 "옆에 태그가 더 있음"을 암시(TD-030 가로 스크롤 어포던스) -->
-                <ScrollViewer.OpacityMask>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                          PreviewMouseWheel="TagScroll_PreviewMouseWheel"
+                          ScrollChanged="TagScroll_ScrollChanged">
+                <!-- 오른쪽 끝을 살짝 투명하게(페이드) 해 "옆에 태그가 더 있음"을 암시(TD-030 가로 스크롤 어포던스).
+                     칩이 바를 넘칠 때만 code-behind가 이 마스크를 씌운다(TD-048) — 안 넘치면 가릴 것이 없다. -->
+                <ScrollViewer.Resources>
+                    <LinearGradientBrush x:Key="TagFadeMask" StartPoint="0,0" EndPoint="1,0">
                         <GradientStop Offset="0" Color="Black" />
                         <GradientStop Offset="0.92" Color="Black" />
                         <GradientStop Offset="1" Color="Transparent" />
                     </LinearGradientBrush>
-                </ScrollViewer.OpacityMask>
+                </ScrollViewer.Resources>
                 <ItemsControl ItemsSource="{Binding AvailableTags}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -166,7 +168,7 @@
 
         <!-- 계정 카드 리스트 (design-ux §4). 화면 전환 fade는 셸(ContentControl)이 전담한다. -->
         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-            <ItemsControl ItemsSource="{Binding Groups}">
+            <ItemsControl x:Name="GroupList" ItemsSource="{Binding Groups}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <!-- 사이트 그룹 카드: 헤더(아바타+사이트명) + 계정 행들 -->

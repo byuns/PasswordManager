@@ -656,6 +656,48 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void Refresh_follows_selection_when_entry_instance_is_replaced()
+    {
+        // 편집 저장은 원본을 두고 새 VaultEntry로 교체한다(TD-021). 참조로만 비교하면 선택이
+        // 조용히 풀려, 돌아온 목록에서 그 행을 다시 찾아줄 수 없다(TD-049).
+        var vault = UnlockedWith(("Steam", "gamer"), ("GitHub", "dev"));
+        var vm = new MainViewModel(vault);
+        var steam = vm.Entries.First(e => e.Title == "Steam");
+        vm.Select(steam, inFavorites: false);
+
+        vault.Update(new VaultEntry
+        {
+            Id = steam.Id, Title = "Steam", Login = "gamer", Password = "new-pw",
+        });
+        vm.Refresh();
+
+        Assert.NotNull(vm.SelectedEntry);
+        Assert.Equal(steam.Id, vm.SelectedEntry!.Id);
+        Assert.NotSame(steam, vm.SelectedEntry); // 교체된 새 인스턴스를 가리켜야 한다
+        Assert.Same(vm.Entries.First(e => e.Id == steam.Id), vm.SelectedEntry);
+    }
+
+    [Fact]
+    public void Refresh_keeps_favorites_flag_when_instance_is_replaced()
+    {
+        var vault = UnlockedWith(("Steam", "gamer"));
+        var vm = new MainViewModel(vault);
+        var steam = vm.Entries[0];
+        vault.SetPinned(steam.Id, true);
+        vm.Refresh();
+        vm.Select(vm.Entries[0], inFavorites: true);
+
+        vault.Update(new VaultEntry
+        {
+            Id = steam.Id, Title = "Steam", Login = "gamer", Password = "new-pw",
+        });
+        vm.Refresh();
+
+        Assert.Equal(steam.Id, vm.SelectedEntry?.Id);
+        Assert.True(vm.SelectionInFavorites); // 핀이 유지되면 즐겨찾기 쪽 강조도 유지
+    }
+
+    [Fact]
     public void ClearFilters_resets_search_and_tags()
     {
         var vm = new MainViewModel(UnlockedWithTagged(
